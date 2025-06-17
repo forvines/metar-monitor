@@ -9,12 +9,16 @@ This application monitors METAR (Meteorological Aerodrome Reports) for specified
   - Blue: MVFR (Marginal Visual Flight Rules)
   - Red: IFR (Instrument Flight Rules)
   - Purple: LIFR (Low Instrument Flight Rules)
-  - Yellow: Strong winds (>30kts), gusts (>20kts), or thunderstorms
+  - Yellow: Strong winds (>30kts), gusts (>20kts), thunderstorms, or crosswinds (>10kts)
 
 - **LED support** for Raspberry Pi with WS2811 LED strips
 - **Forecast data** based on TAF (Terminal Aerodrome Forecast)
-- **Display mode toggle button** to switch between current conditions and forecast
+- **Multiple forecast periods** (4h, 8h, 12h, 18h, 24h)
+- **Display mode toggle button** to cycle through current conditions and forecasts
 - **Robust API client** with retry logic, error handling, and comprehensive logging
+- **Crosswind calculation** for airports with runway information
+- **Configurable LED legend** for easy status interpretation
+- **Structured logging system** with log rotation and 7-day retention
 
 ## Requirements
 
@@ -51,17 +55,37 @@ Edit the `metar_config.json` file with your airport settings:
 
 ```json
 {
-  "airports": [
-    {"icao": "KSEA", "name": "Seattle-Tacoma Intl", "led": 0},
-    {"icao": "KBFI", "name": "Boeing Field", "led": 1}
+  "crosswind_threshold": 10,
+  "legend": [
+    {"name": "VFR - Visual Flight Rules", "color": "GREEN", "led": 0},
+    {"name": "MVFR - Marginal Visual Flight Rules", "color": "BLUE", "led": 1},
+    {"name": "IFR - Instrument Flight Rules", "color": "RED", "led": 2},
+    {"name": "LIFR - Low Instrument Flight Rules", "color": "PURPLE", "led": 3},
+    {"name": "Weather Warning (Wind/Storm/Crosswind)", "color": "YELLOW", "led": 4}
   ],
-  "update_interval": 900,
+  "airports": [
+    {"icao": "KSEA", "name": "Seattle-Tacoma Intl", "led": 17, "runways": [
+      {"name": "16L/34R", "direction": 160},
+      {"name": "16C/34C", "direction": 160},
+      {"name": "16R/34L", "direction": 160}
+    ]},
+    {"icao": "KBFI", "name": "Boeing Field", "led": 18, "runways": [
+      {"name": "14R/32L", "direction": 140},
+      {"name": "14L/32R", "direction": 140}
+    ]}
+  ],
+  "update_interval": 600,
   "metar_url": "https://aviationweather.gov/api/data/metar",
   "taf_url": "https://aviationweather.gov/api/data/taf",
-  "forecast_hours": [4, 6, 12],
+  "forecast_hours": [4, 8, 12, 18, 24],
   "led_pin": 18,
-  "led_count": 50,
-  "led_brightness": 50
+  "led_count": 56,
+  "led_brightness": 50,
+  "led_freq_hz": 800000,
+  "led_dma": 10,
+  "led_invert": false,
+  "led_channel": 0,
+  "mode_indicator_led": 55
 }
 ```
 
@@ -140,15 +164,15 @@ sudo pip3 install rpi_ws281x RPi.GPIO
 
 5. Map airports to specific LED indices in the configuration file
 
-6. The last LED in the strip (LED 49 by default, configurable as `mode_indicator_led` in config.json) will display the current mode:
+6. The mode indicator LED (LED 55 by default, configurable as `mode_indicator_led` in config.json) will display the current mode:
    - White: METAR mode (current conditions)
-   - Cyan: TAF mode with forecast ≤ 6 hours ahead
+   - Cyan: TAF mode with forecast ≤ 8 hours ahead
    - Orange: TAF mode with forecast ≤ 12 hours ahead
    - Pink: TAF mode with forecast > 12 hours ahead
 
 7. When the system is running, press the button to cycle through the modes:
-   - First press changes from METAR to TAF mode showing the first forecast period (e.g., 4 hours)
-   - Additional presses cycle through available forecast periods (e.g., 6h, 12h, 18h, 24h)
+   - First press changes from METAR to TAF mode showing the first forecast period (4 hours)
+   - Additional presses cycle through available forecast periods (8h, 12h, 18h, 24h)
    - After cycling through all forecast periods, returns to METAR mode
 
 ## Troubleshooting
@@ -179,6 +203,15 @@ Common issues:
 - Verify API URLs in configuration
 - Review logs for specific error messages: `cat metar_monitor.log`
 
+### Logging
+
+The application uses a structured logging system with the following features:
+- Log rotation at midnight
+- 7-day log retention
+- Combined console and file logging
+- Different log levels for debugging (INFO level by default)
+- Logs stored in `metar_monitor.log` in the application directory
+
 ## Development
 
 ### Running tests
@@ -193,10 +226,28 @@ The codebase is organized as follows:
 
 - `metar_monitor.py` - Main application
 - `metar_api_client.py` - API client for data fetching
+- `airport_utils.py` - Utility functions for runway data and crosswind calculations
+- `constants.py` - Constants, defaults, and configuration settings
+- `button_handler.py` - GPIO button handling for mode toggle
 - `metar_config.json` - Configuration file
 - `test_metar_monitor.py` - Unit tests
 - `metar-monitor.service` - Systemd service file
 - `metar_monitor_startup.sh` - Startup script for service
+
+### Logging guidelines
+
+When modifying or extending this application:
+
+- Use the established logging system instead of print statements
+- Import the logger in your module: `logger = logging.getLogger("your_module_name")`
+- Use appropriate log levels:
+  - `logger.debug()` for detailed debugging information
+  - `logger.info()` for general information
+  - `logger.warning()` for warning conditions
+  - `logger.error()` for error conditions
+  - `logger.critical()` for critical errors
+- Include contextual information in log messages
+- For user-facing information that needs to appear in the terminal, still use the logger
 
 ## License
 

@@ -6,20 +6,32 @@ Displays color-coded status for flight conditions:
 - Blue: MVFR (Marginal Visual Flight Rules)
 - Red: IFR (Instrument Flight Rules)
 - Purple: LIFR (Low Instrument Flight Rules)
-- Yellow: Strong winds (>30kts), gusts (>20kts), or thunderstorms
+- Yellow: Strong winds (>30kts), gusts (>20kts), thunderstorms, or crosswind (>10kts)
 
 This version supports WS2811 LED output on a Raspberry Pi
 """
 
-import urllib.request
 import json
 import time
-import re
 import os
 import logging
+import math
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime, timedelta
 from metar_api_client import METARAPIClient, APIRequestFailed
+from airport_utils import extract_wind_data, calculate_airport_crosswind
+from metar_processor import determine_flight_category
+from taf_processor import (
+    process_taf_data as process_taf_data_module,
+    get_most_recent_taf, find_relevant_forecast_period,
+    format_clouds_info, format_wind, process_forecast_period
+)
+from weather_status import determine_status_color, get_warning_text
+from constants import (
+    COLORS, CATEGORY_COLOR_MAP, FLIGHT_CATEGORIES, 
+    THRESHOLDS, DEFAULT_BUTTON_PIN,
+    DEFAULT_CONFIG, CONFIG_FILE
+)
 
 # Display modes
 class DisplayMode:
@@ -44,67 +56,6 @@ class DisplayMode:
                 return "TAF Forecast"
         return "Unknown"
 
-# Constants for the application
-class Constants:
-    """Constants and configuration values for the application"""
-    
-    # Default GPIO pin for mode toggle button
-    DEFAULT_BUTTON_PIN = 17
-    
-    # Flight categories and their descriptions
-    FLIGHT_CATEGORIES = {
-        "VFR": "Visual Flight Rules",
-        "MVFR": "Marginal Visual Flight Rules",
-        "IFR": "Instrument Flight Rules",
-        "LIFR": "Low Instrument Flight Rules"
-    }
-    
-    # Weather patterns for METAR parsing
-    REGEX_PATTERNS = {
-        "WINDS": r'\b\d{3}(\d{2})(?:G\d+)?KT\b',  # Wind pattern (e.g. 27015KT)
-        "GUSTS": r'\b\d{3}\d{2}G(\d+)KT\b',       # Gust pattern (e.g. 27015G25KT)
-        "THUNDERSTORM": ["TSRA", " TS "]          # Thunderstorm indicators
-    }
-    
-    # Thresholds for flight categories
-    THRESHOLDS = {
-        "VISIBILITY": {
-            "LIFR": 1.0,     # Below 1 mile
-            "IFR": 3.0,      # 1-3 miles
-            "MVFR": 5.0      # 3-5 miles
-            # VFR is above 5 miles
-        },
-        "CEILING": {
-            "LIFR": 500,     # Below 500 feet
-            "IFR": 1000,     # 500-1000 feet
-            "MVFR": 3000     # 1000-3000 feet
-            # VFR is above 3000 feet
-        },
-        "WINDS": 30,         # Strong wind threshold (knots)
-        "GUSTS": 20          # Gust threshold (knots)
-    }
-    
-    # ANSI color codes for terminal output
-    COLORS = {
-        "GREEN": "\033[92m",  # VFR
-        "BLUE": "\033[34m",   # MVFR - Changed to a more distinct blue color
-        "RED": "\033[91m",    # IFR
-        "PURPLE": "\033[95m", # LIFR
-        "YELLOW": "\033[93m", # Wind/Storm warnings
-        "RESET": "\033[0m"    # Reset color
-    }
-    
-    # Mapping between flight categories and LED colors
-    CATEGORY_COLOR_MAP = {
-        "VFR": "GREEN",
-        "MVFR": "BLUE",
-        "IFR": "RED",
-        "LIFR": "PURPLE"
-    }
-
-# Use the constants for easier reference
-COLORS = Constants.COLORS
-
 # Try to import the rpi_ws281x library for LED control
 LED_ENABLED = False
 LED_COLORS = {}
@@ -124,28 +75,9 @@ try:
         "OFF": Color(0, 0, 0)         # Off
     }
     LED_ENABLED = True
-    print("LED support enabled")
+    logging.info("LED support enabled")
 except ImportError:
-    print("rpi_ws281x library not found. Running in console-only mode.")
-
-# Default configuration
-DEFAULT_CONFIG = {
-    "airports": ["KSEA", "KBFI", "KRNT", "KPAE", "KTIW", "KOLM"],
-    "update_interval": 900,  # 15 minutes in seconds
-    "metar_url": "https://aviationweather.gov/api/data/metar",
-    "taf_url": "https://aviationweather.gov/api/data/taf",
-    "forecast_hours": [4, 6, 12, 18, 24],  # Hours ahead to forecast using TAF
-    "led_pin": 18,           # GPIO pin connected to the pixels (18 uses PWM)
-    "led_count": 50,         # Number of LED pixels
-    "led_brightness": 50,    # Set to 0 for darkest and 255 for brightest
-    "led_freq_hz": 800000,   # LED signal frequency in Hz (usually 800khz)
-    "led_dma": 10,           # DMA channel to use for generating signal
-    "led_invert": False,     # True to invert the signal (when using NPN transistor level shift)
-    "led_channel": 0,        # set to '1' for GPIOs 13, 19, 41, 45 or 53
-    "mode_indicator_led": 49 # LED to use for indicating current display mode (last LED by default)
-}
-
-CONFIG_FILE = "metar_config.json"
+    logging.info("rpi_ws281x library not found. Running in console-only mode.")
 
 def load_config():
     """Load configuration from file or create default if not exists"""
@@ -159,14 +91,14 @@ def load_config():
                         config[key] = DEFAULT_CONFIG[key]
                 return config
         except Exception as e:
-            print(f"Error loading config file: {e}")
-            print("Using default configuration")
+            logging.error(f"Error loading config file: {e}")
+            logging.warning("Using default configuration")
             return DEFAULT_CONFIG
     else:
         # Create default config file
         with open(CONFIG_FILE, 'w') as f:
             json.dump(DEFAULT_CONFIG, f, indent=4)
-        print(f"Created default configuration file: {CONFIG_FILE}")
+        logging.info(f"Created default configuration file: {CONFIG_FILE}")
         return DEFAULT_CONFIG
 
 class LEDController:
@@ -191,18 +123,18 @@ class LEDController:
                 # Initialize the library (must be called once before other functions)
                 self.strip.begin()
                 self.initialized = True
-                print("LED strip initialized successfully")
+                logging.info("LED strip initialized successfully")
                 
                 # Turn off all LEDs initially
                 self.clear()
             except Exception as e:
-                print(f"Error initializing LED strip: {e}")
+                logging.error(f"Error initializing LED strip: {e}")
                 self.initialized = False
     
     def set_led(self, index, color_name):
         """Set an LED to a specific color"""
         if not self.initialized or index >= self.config["led_count"]:
-            print(f"LED index {index} out of range or LED strip not initialized.")
+            logging.warning(f"LED index {index} out of range or LED strip not initialized.")
             return
             
         if color_name in LED_COLORS:
@@ -210,7 +142,7 @@ class LEDController:
             self.strip.setPixelColor(index, color)
             self.strip.show()
         else:
-            print(f"Unknown color name: {color_name}. Using default OFF color.")
+            logging.warning(f"Unknown color name: {color_name}. Using default OFF color.")
             self.strip.setPixelColor(index, LED_COLORS["OFF"])
             self.strip.show()
     
@@ -226,23 +158,26 @@ class LEDController:
 class METARStatus:
     def print_color_legend(self):
         """Print a legend for the colors used in the display"""
+        self.logger.info("Displaying color legend")
         print("\n" + "=" * 60)
         print("Color Legend:")
         
         # Print flight categories
-        for category, color in Constants.CATEGORY_COLOR_MAP.items():
-            description = Constants.FLIGHT_CATEGORIES.get(category, "")
+        for category, color in CATEGORY_COLOR_MAP.items():
+            description = FLIGHT_CATEGORIES.get(category, "")
             print(f"{COLORS[color]}{color.title()}: {category} ({description}){COLORS['RESET']}")
         
         # Print weather warning
-        wind_threshold = Constants.THRESHOLDS["WINDS"]
-        gust_threshold = Constants.THRESHOLDS["GUSTS"]
-        print(f"{COLORS['YELLOW']}Yellow: Strong winds (>{wind_threshold}kts), gusts (>{gust_threshold}kts), or thunderstorms{COLORS['RESET']}")
+        wind_threshold = THRESHOLDS["WINDS"]
+        gust_threshold = THRESHOLDS["GUSTS"]
+        crosswind_threshold = self.config.get("crosswind_threshold", 10)
+        print(f"{COLORS['YELLOW']}Yellow: Strong winds (>{wind_threshold}kts), gusts (>{gust_threshold}kts), thunderstorms, or crosswind (>{crosswind_threshold}kts){COLORS['RESET']}")
         
         print("=" * 60)
     
     def print_led_mapping(self):
         """Print the mapping between LEDs and airports"""
+        self.logger.info("Displaying LED to airport mapping")
         print("\nLED to Airport Mapping:")
         for airport_info in self.config["airports"]:
             icao = airport_info["icao"]
@@ -352,7 +287,12 @@ class METARStatus:
     def update_led_display(self):
         """Update LEDs based on current display mode"""
         if not self.led_controller:
+            self.logger.debug("LED controller not available, skipping LED display update")
             return
+            
+        self.logger.info("Updating LED display in %s mode", 
+                       "METAR" if self.display_mode == DisplayMode.METAR else 
+                       f"TAF {self.current_forecast_hour}h")
         
         # Update airport LEDs if we have data
         if self.airport_data:
@@ -465,8 +405,11 @@ class METARStatus:
         # Determine flight category based on ceiling and visibility
         flight_category = self.determine_flight_category(metar_data)
         
-        # Determine status color
-        status_color = self.determine_status_color(raw_text, flight_category)
+        # Use airport_utils to calculate crosswind using runway data from config
+        wind_data = calculate_airport_crosswind(self.config, station_id, raw_text)
+        
+        # Determine status color with crosswind information
+        status_color = self.determine_status_color(raw_text, flight_category, wind_data)
         
         # Initialize airport data
         self.airport_data[station_id] = {
@@ -476,7 +419,8 @@ class METARStatus:
             "forecast": None,
             "forecast_category": None,
             "forecast_color": None,
-            "name": airport_name
+            "name": airport_name,
+            "wind_data": wind_data  # Store wind and crosswind data
         }
         
         # Process TAF data if available
@@ -502,7 +446,7 @@ class METARStatus:
         # Format the display
         color_code = COLORS.get(status_color, COLORS["RESET"])
         status_text = flight_category if flight_category else "Unknown"
-        warning_text = self.get_warning_text(status_color, raw_text)
+        warning_text = self.get_warning_text(status_color, raw_text, station_id)
         
         print(f"{station_id} - {airport_data['name']}: {color_code}{status_text}{warning_text}{COLORS['RESET']}")
         print(f"  METAR: {raw_text}")
@@ -521,12 +465,14 @@ class METARStatus:
         if self.led_controller and station_id in self.airport_to_led:
             led_index = self.airport_to_led[station_id]
             print(f"  Setting LED {led_index} to {status_color}")
+            self.logger.debug(f"Setting LED {led_index} for {station_id} to {status_color}")
             self.led_controller.set_led(led_index, status_color)
             
         print("-" * 60)
     
     def print_led_summary(self):
         """Print a summary of all LEDs with their colors and airport names"""
+        self.logger.info("Displaying LED summary")
         print("\n" + "=" * 60)
         print("LED Summary:")
         print("-" * 60)
@@ -571,7 +517,7 @@ class METARStatus:
                 warning_text = ""
                 if status_color == "YELLOW":
                     warning_text = self.get_warning_text(
-                        status_color, self.airport_data[icao].get("raw_metar", "")
+                        status_color, self.airport_data[icao].get("raw_metar", ""), icao
                     )
                 
                 # Print the LED summary line
@@ -619,7 +565,7 @@ class METARStatus:
         # Step 1: Fetch METAR data
         airport_metars = self._fetch_raw_metar_data(airports)
         if not airport_metars:
-            print("No METAR data was retrieved.")
+            self.logger.error("No METAR data was retrieved.")
             return False
             
         # Step 2: Fetch TAF data for all airports at once
@@ -806,15 +752,27 @@ class METARStatus:
         forecast_category = self.determine_forecast_category(period)
         
         # Create text for weather warnings check
-        forecast_text = self._format_wind(wdir, wspd) + f"KT {visib} {clouds_str}"
-        forecast_color = self.determine_status_color(forecast_text, forecast_category)
+        forecast_text = f"{wind_text}KT {visib} {clouds_str}"
+        
+        # Calculate crosswind if we have an airport with runway data
+        wind_data = None
+        if airport and "rawText" in period:
+            # Use airport_utils to calculate crosswind using runway data from config
+            wind_data = extract_wind_data(forecast_text)
+            
+            # If we have runway data for this airport, calculate crosswinds
+            wind_data = calculate_airport_crosswind(self.config, airport, forecast_text, wind_data)
+        
+        # Determine status color with wind data for crosswind check
+        forecast_color = self.determine_status_color(forecast_text, forecast_category, wind_data)
         
         return {
             "category": forecast_category,
             "color": forecast_color,
             "taf_summary": taf_summary,
             "time_from": from_time,
-            "time_to": datetime.fromtimestamp(period.get("timeTo"))
+            "time_to": datetime.fromtimestamp(period.get("timeTo")),
+            "wind_data": wind_data
         }
             
     def process_taf_data(self, airport, taf_data_list):
@@ -824,6 +782,8 @@ class METARStatus:
         forecast information for the configured forecast hours. Stores the processed
         data in the airport_data dictionary.
         
+        This is now mainly a wrapper for the function in the taf_processor module
+        
         Args:
             airport (str): The ICAO identifier of the airport
             taf_data_list (list): List of TAF data objects for the airport
@@ -831,60 +791,43 @@ class METARStatus:
         try:
             self.logger.debug("Processing TAF data for %s", airport)
             
-            # Get the most recent TAF
-            most_recent_taf = self._get_most_recent_taf(taf_data_list)
-            if not most_recent_taf:
-                self.logger.warning("No valid TAF found for %s", airport)
-                return
-            
-            # Store the raw TAF
-            raw_taf = most_recent_taf.get("rawTAF")
-            self.airport_data[airport]["forecast"] = raw_taf
-            self.airport_data[airport]["forecasts"] = {}
-            
-            # Get forecast hours, ensure it's a list
+            # Get forecast hours from config
             forecast_hours = self.config["forecast_hours"]
             if not isinstance(forecast_hours, list):
                 forecast_hours = [forecast_hours]
+                
+            # Use the taf_processor module
+            taf_data = process_taf_data_module(airport, taf_data_list, forecast_hours)
             
-            # Get all forecast periods from the TAF
-            forecast_periods = most_recent_taf.get("fcsts", [])
-            if not forecast_periods:
-                self.logger.warning("No forecast periods in TAF for %s", airport)
-                return
+            # Store the results in airport_data
+            if taf_data["forecast"]:
+                self.airport_data[airport]["forecast"] = taf_data["forecast"]
+                self.airport_data[airport]["forecasts"] = {}
                 
-            # Process each forecast hour
-            processed_hours = 0
-            for hours in forecast_hours:
-                # Calculate the target forecast time
-                target_time = datetime.now() + timedelta(hours=hours)
-                
-                # Find the relevant forecast period
-                relevant_period, from_time = self._find_relevant_forecast_period(
-                    forecast_periods, target_time
-                )
-                
-                if not relevant_period:
-                    self.logger.debug("No forecast period found for %s at +%d hours", airport, hours)
-                    continue
-                
-                # Process the forecast period
-                forecast_data = self._process_forecast_period(relevant_period, from_time, airport)
-                if not forecast_data:
-                    self.logger.debug("Failed to process forecast period for %s at +%d hours", airport, hours)
-                    continue
+                processed_hours = 0
+                for hours, forecast in taf_data["forecasts"].items():
+                    # Apply status color using weather_status module
+                    forecast_text = forecast.get("taf_summary", "")
+                    forecast_category = forecast.get("category", "Unknown")
+                    wind_data = forecast.get("wind_data", None)
                     
-                # Store the forecast information
-                self.airport_data[airport]["forecasts"][hours] = forecast_data
-                processed_hours += 1
-                
-                # For backward compatibility, store the 6-hour forecast (or first forecast if no 6-hour)
-                if hours == 6 or "forecast_category" not in self.airport_data[airport]:
-                    self.airport_data[airport]["forecast_category"] = forecast_data["category"]
-                    self.airport_data[airport]["forecast_color"] = forecast_data["color"]
-                    self.airport_data[airport]["forecast_taf_summary"] = forecast_data["taf_summary"]
-            
-            self.logger.debug("Successfully processed %d forecast periods for %s", processed_hours, airport)
+                    # Determine status color with crosswind information
+                    forecast_color = self.determine_status_color(forecast_text, forecast_category, wind_data)
+                    
+                    # Store the forecast information with color
+                    self.airport_data[airport]["forecasts"][hours] = forecast.copy()
+                    self.airport_data[airport]["forecasts"][hours]["color"] = forecast_color
+                    processed_hours += 1
+                    
+                    # For backward compatibility, store the 6-hour forecast (or first forecast if no 6-hour)
+                    if hours == 6 or "forecast_category" not in self.airport_data[airport]:
+                        self.airport_data[airport]["forecast_category"] = forecast_category
+                        self.airport_data[airport]["forecast_color"] = forecast_color
+                        self.airport_data[airport]["forecast_taf_summary"] = forecast.get("taf_summary", "")
+                        
+                self.logger.debug("Successfully processed %d forecast periods for %s", processed_hours, airport)
+            else:
+                self.logger.warning("No valid TAF data found for %s", airport)
             
         except Exception as e:
             self.logger.exception("Error processing TAF data for %s: %s", airport, str(e))
@@ -893,140 +836,71 @@ class METARStatus:
         """Legacy method for backward compatibility"""
         pass  # This method is kept for backward compatibility but is no longer used
             
-    def _determine_flight_category_from_values(self, visibility, ceiling):
-        """Helper method to determine flight category based on visibility and ceiling values"""
-        if visibility is None and ceiling is None:
-            return "Unknown"
-        
-        # Check for LIFR conditions first (lowest ceiling/visibility)
-        lifr_vis = Constants.THRESHOLDS["VISIBILITY"]["LIFR"]
-        lifr_ceiling = Constants.THRESHOLDS["CEILING"]["LIFR"]
-        if (visibility is not None and visibility < lifr_vis) or (ceiling is not None and ceiling < lifr_ceiling):
-            return "LIFR"  # Low IFR
-        
-        # Check for IFR conditions
-        ifr_vis = Constants.THRESHOLDS["VISIBILITY"]["IFR"]
-        ifr_ceiling = Constants.THRESHOLDS["CEILING"]["IFR"]
-        if (visibility is not None and visibility < ifr_vis) or (ceiling is not None and ceiling < ifr_ceiling):
-            return "IFR"   # IFR
-        
-        # Check for MVFR conditions
-        mvfr_vis = Constants.THRESHOLDS["VISIBILITY"]["MVFR"]
-        mvfr_ceiling = Constants.THRESHOLDS["CEILING"]["MVFR"]
-        if (visibility is not None and visibility < mvfr_vis) or (ceiling is not None and ceiling < mvfr_ceiling):
-            return "MVFR"  # Marginal VFR
-        
-        # If none of the above, it's VFR
-        return "VFR"   # VFR
-    
     def determine_forecast_category(self, forecast_period):
-        """Determine flight category based on forecast data"""
-        # Extract visibility (in statute miles)
-        visibility = forecast_period.get("visib")
-        if visibility == "6+" or visibility == "P6SM":
-            visibility = 6.0
-        else:
-            try:
-                visibility = float(visibility)
-            except (ValueError, TypeError):
-                visibility = None
+        """Determine flight category based on forecast data
         
-        # Find lowest ceiling (height of lowest broken or overcast layer)
-        ceiling = None
-        clouds = forecast_period.get("clouds", [])
-        for cloud in clouds:
-            cover = cloud.get("cover")
-            if cover in ["BKN", "OVC"]:  # Broken or Overcast
-                base = cloud.get("base")
-                if base is not None:
-                    try:
-                        base = int(base)
-                        if ceiling is None or base < ceiling:
-                            ceiling = base
-                    except (ValueError, TypeError):
-                        pass
+        This now uses the function from the taf_processor module
         
-        # Use helper method to determine flight category
-        return self._determine_flight_category_from_values(visibility, ceiling)
+        Args:
+            forecast_period: A forecast period object from the TAF data
+            
+        Returns:
+            str: Flight category (VFR, MVFR, IFR, LIFR, or Unknown)
+        """
+        from taf_processor import determine_forecast_category as determine_taf_category
+        return determine_taf_category(forecast_period)
             
     def determine_flight_category(self, metar):
-        """Determine flight category based on ceiling and visibility"""
-        # Extract visibility (in statute miles)
-        visibility = metar.get("visib")
-        if visibility == "10+":
-            visibility = 10.0
-        else:
-            try:
-                visibility = float(visibility)
-            except (ValueError, TypeError):
-                visibility = None
+        """Determine flight category based on ceiling and visibility
         
-        # Find lowest ceiling (height of lowest broken or overcast layer)
-        ceiling = None
-        clouds = metar.get("clouds", [])
-        for cloud in clouds:
-            cover = cloud.get("cover")
-            if cover in ["BKN", "OVC"]:  # Broken or Overcast
-                base = cloud.get("base")
-                if base is not None:
-                    if ceiling is None or base < ceiling:
-                        ceiling = base
+        This is now a wrapper for the function in the metar_processor module
+        """
+        # Use the imported function from metar_processor
+        return determine_flight_category(metar)
+    
+    def get_warning_text(self, status_color, raw_text, airport_id=None):
+        """Generate a warning text description for weather conditions
         
-        # Use helper method to determine flight category
-        return self._determine_flight_category_from_values(visibility, ceiling)
-    
-    def get_warning_text(self, status_color, raw_text):
-        """Generate a warning text description for weather conditions"""
-        warning_text = ""
-        if status_color == "YELLOW":
-            # Check for gusts
-            if "G" in raw_text and re.search(Constants.REGEX_PATTERNS["GUSTS"], raw_text):
-                gust_match = re.search(Constants.REGEX_PATTERNS["GUSTS"], raw_text)
-                warning_text = f" - Gusts {gust_match.group(1)}KT"
-            # Check for strong winds
-            elif re.search(Constants.REGEX_PATTERNS["WINDS"], raw_text):
-                wind_match = re.search(Constants.REGEX_PATTERNS["WINDS"], raw_text)
-                warning_text = f" - Winds {wind_match.group(1)}KT"
-            # Check for thunderstorms
-            elif any(pattern in raw_text for pattern in Constants.REGEX_PATTERNS["THUNDERSTORM"]):
-                warning_text = " - Thunderstorm"
-        return warning_text
-    
-    def _format_wind(self, wdir, wspd):
-        """Helper method to format wind direction and speed safely"""
-        try:
-            # Try to format as integers with padding
-            wdir_fmt = f"{int(wdir):03d}" if wdir is not None else "---"
-            wspd_fmt = f"{int(wspd):02d}" if wspd is not None else "--"
-            return f"{wdir_fmt}{wspd_fmt}"
-        except (ValueError, TypeError):
-            # If conversion fails, just concatenate the raw values
-            return f"{wdir or '---'}{wspd or '--'}"
-    
-    def determine_status_color(self, raw_metar, flight_category):
-        """Determine the status color based on METAR data"""
-        # Check for strong winds, gusts, or thunderstorms first
-        if raw_metar:
-            # Check for winds over threshold knots
-            wind_match = re.search(Constants.REGEX_PATTERNS["WINDS"], raw_metar)
-            if wind_match and int(wind_match.group(1)) > Constants.THRESHOLDS["WINDS"]:
-                return "YELLOW"
+        This is now a wrapper for the function in the weather_status module
+        
+        Args:
+            status_color (str): The color indicating the airport status
+            raw_text (str): Raw METAR string
+            airport_id (str): Optional airport ID to lookup crosswind data
             
-            # Check for gusts over threshold knots
-            gust_match = re.search(Constants.REGEX_PATTERNS["GUSTS"], raw_metar)
-            if gust_match and int(gust_match.group(1)) > Constants.THRESHOLDS["GUSTS"]:
-                return "YELLOW"
+        Returns:
+            str: Warning text describing the reason for the status color
+        """
+        wind_data = None
+        config = None
+        
+        # Check if we have airport_id and can look up wind data
+        if airport_id and airport_id in self.airport_data:
+            wind_data = self.airport_data[airport_id].get("wind_data", {})
+            config = self.config
             
-            # Check for thunderstorms
-            if any(pattern in raw_metar for pattern in Constants.REGEX_PATTERNS["THUNDERSTORM"]):
-                return "YELLOW"
+        return get_warning_text(status_color, raw_text, airport_id, wind_data, config)
+    
+    
+    def determine_status_color(self, raw_metar, flight_category, wind_data=None):
+        """Determine the status color based on METAR data and wind/crosswind conditions
         
-        # Then check flight category and map to appropriate color
-        if flight_category in Constants.CATEGORY_COLOR_MAP:
-            return Constants.CATEGORY_COLOR_MAP[flight_category]
+        This is now a wrapper for the function in the weather_status module
         
-        # Default if we can't determine
-        return "OFF"
+        Args:
+            raw_metar (str): Raw METAR string
+            flight_category (str): Flight category (VFR, MVFR, IFR, LIFR)
+            wind_data (dict): Optional wind data including crosswind information
+            
+        Returns:
+            str: Color name representing the flight status
+        """
+        # Pass the crosswind_threshold from config if we have wind data
+        if wind_data and wind_data.get("crosswind") is not None:
+            wind_data = dict(wind_data)  # Create a copy to modify
+            wind_data["crosswind_threshold"] = self.config.get("crosswind_threshold", 10)
+            
+        return determine_status_color(raw_metar, flight_category, wind_data)
 
 def main():
     # Configure logging with log rotation
@@ -1092,7 +966,7 @@ def main():
     button_handler = None
     if button_available:
         # Configure the button handler with the toggle display mode callback
-        button_pin = config.get("button_pin", Constants.DEFAULT_BUTTON_PIN)
+        button_pin = config.get("button_pin", DEFAULT_BUTTON_PIN)
         logger.info("Setting up button handler on GPIO pin %d", button_pin)
         
         def toggle_mode_callback():
@@ -1135,7 +1009,7 @@ def main():
                 metar_status.update_led_display()
     
     except KeyboardInterrupt:
-        print("\nExiting METAR Status Monitor.")
+        logger.info("KeyboardInterrupt received, shutting down")
         # Clean up resources
         if button_handler:
             button_handler.stop()
@@ -1144,6 +1018,8 @@ def main():
         if led_controller:
             led_controller.clear()
             logger.info("LED controller cleared")
+            
+        logger.info("METAR Monitor shut down cleanly")
 
 if __name__ == "__main__":
     main()
