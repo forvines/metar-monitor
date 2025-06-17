@@ -1,0 +1,19 @@
+[Unit]
+Description=METAR Monitor Service
+After=network.target
+Wants=network-online.target
+Requires=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/pi/metar_monitor/metar_monitor_startup.sh --log
+WorkingDirectory=/home/pi/metar_monitor
+StandardOutput=journal
+StandardError=journal
+Restart=always
+RestartSec=10
+User=root
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

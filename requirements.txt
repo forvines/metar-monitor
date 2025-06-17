@@ -1,0 +1,13 @@
+# Core requirements for METAR monitor
+urllib3>=1.26.0
+# Python 3.6+ is required for this application
+python_version>=3.6
+
+# For unit testing
+pytest>=6.0.0
+pytest-mock>=3.6.0
+
+# Optional requirements for Raspberry Pi
+# Uncomment these lines when installing on a Raspberry Pi
+# rpi_ws281x>=4.3.0  # For LED control
+# RPi.GPIO>=0.7.0    # For button input
