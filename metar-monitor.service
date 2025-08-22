@@ -6,14 +6,59 @@ Requires=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/pi/metar_monitor/metar_monitor_startup.sh --log
-WorkingDirectory=/home/pi/metar_monitor
+WorkingDirectory=/home/forvines/Projects/metar_monitor
 StandardOutput=journal
 StandardError=journal
 Restart=always
 RestartSec=10
 User=root
 Environment="PYTHONUNBUFFERED=1"
+
+
+# 1) Wait for wlan0 to be UP (max ~25s)
+ExecStartPre=/bin/bash -lc 'for i in {1..25}; do ip -br a show wlan0 | grep -q "UP" && break; sleep 1; done'
+
+# 2) Sanity: ensure the rpi_ws281x lib can import; fail early if not installed
+ExecStartPre=/usr/bin/python3 - <<'PY'
+try:
+    import rpi_ws281x  # noqa
+except Exception as e:
+    import sys; print("rpi_ws281x import failed:", e); sys.exit(1)
+print("rpi_ws281x import ok")
+PY
+
+# 3) Optional: quick hardware ping so you see a pixel flash before network I/O
+#    (respects your config: led_pin=18, led_count=100, brightness=80, etc.)
+ExecStartPre=/usr/bin/python3 - <<'PY'
+import json, os, time
+from rpi_ws281x import PixelStrip, Color
+cfg = json.load(open("metar_config.json"))
+strip = PixelStrip(cfg["led_count"], cfg["led_pin"], cfg["led_freq_hz"],
+                   cfg["led_dma"], cfg["led_invert"], cfg["led_brightness"],
+                   cfg["led_channel"])
+strip.begin()
+strip.setPixelColor(0, Color(255,255,255)); strip.show(); time.sleep(0.4)
+strip.setPixelColor(0, Color(0,0,0)); strip.show()
+PY
+
+# Launch your app
+ExecStart=/home/forvines/Projects/metar_monitor/metar_monitor_startup.sh --log
+
+ExecStop=/usr/bin/python3 - <<'PY'
+from rpi_ws281x import PixelStrip, Color
+import json
+cfg = json.load(open("/home/pi/metar_monitor/metar_config.json"))
+strip = PixelStrip(cfg["led_count"], cfg["led_pin"], cfg["led_freq_hz"],
+                   cfg["led_dma"], cfg["led_invert"], cfg["led_brightness"],
+                   cfg["led_channel"])
+strip.begin()
+for i in range(cfg["led_count"]):
+    strip.setPixelColor(i, Color(0,0,0))
+strip.show()
+PY
+
+Restart=on-failure
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target

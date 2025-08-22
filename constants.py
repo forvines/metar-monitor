@@ -36,8 +36,9 @@ THRESHOLDS = {
         "MVFR": 3000     # 1000-3000 feet
         # VFR is above 3000 feet
     },
-    "WINDS": 30,         # Strong wind threshold (knots)
-    "GUSTS": 20          # Gust threshold (knots)
+    "WINDS": 20,         # Strong wind threshold (knots)
+    "GUSTS": 25,         # Gust threshold (knots)
+    "CROSSWINDS": 15      # Crosswind threshold (knots)
 }
 
 # ANSI color codes for terminal output
@@ -56,23 +57,6 @@ CATEGORY_COLOR_MAP = {
     "MVFR": "BLUE",
     "IFR": "RED",
     "LIFR": "PURPLE"
-}
-
-# Default configuration for the application
-DEFAULT_CONFIG = {
-    "airports": ["KSEA", "KBFI", "KRNT", "KPAE", "KTIW", "KOLM"],
-    "update_interval": 900,  # 15 minutes in seconds
-    "metar_url": "https://aviationweather.gov/api/data/metar",
-    "taf_url": "https://aviationweather.gov/api/data/taf",
-    "forecast_hours": [4, 6, 12, 18, 24],  # Hours ahead to forecast using TAF
-    "led_pin": 18,           # GPIO pin connected to the pixels (18 uses PWM)
-    "led_count": 50,         # Number of LED pixels
-    "led_brightness": 50,    # Set to 0 for darkest and 255 for brightest
-    "led_freq_hz": 800000,   # LED signal frequency in Hz (usually 800khz)
-    "led_dma": 10,           # DMA channel to use for generating signal
-    "led_invert": False,     # True to invert the signal (when using NPN transistor level shift)
-    "led_channel": 0,        # set to '1' for GPIOs 13, 19, 41, 45 or 53
-    "mode_indicator_led": 49 # LED to use for indicating current display mode (last LED by default)
 }
 
 # Configuration file path

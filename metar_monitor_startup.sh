@@ -3,9 +3,9 @@
 # Startup script for METAR Monitor
 
 # Directory where the METAR monitor is installed
-METAR_DIR="/home/pi/metar_monitor"
+METAR_DIR="/home/forvines/Projects/metar_monitor"
 # Log file location
-LOG_FILE="/home/pi/metar_monitor/metar_monitor.log"
+LOG_FILE="/home/forvines/Projects/metar_monitor/metar_monitor.log"
 
 # Change to the METAR monitor directory
 cd $METAR_DIR

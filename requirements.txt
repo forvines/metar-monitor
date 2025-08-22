@@ -9,5 +9,5 @@ pytest-mock>=3.6.0
 
 # Optional requirements for Raspberry Pi
 # Uncomment these lines when installing on a Raspberry Pi
-# rpi_ws281x>=4.3.0  # For LED control
-# RPi.GPIO>=0.7.0    # For button input
+rpi_ws281x>=4.3.0  # For LED control
+RPi.GPIO>=0.7.0    # For button input

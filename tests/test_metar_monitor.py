@@ -14,7 +14,8 @@ from datetime import datetime
 # Add the parent directory to the path so we can import modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import metar_monitor
-from metar_monitor import Constants, METARStatus, LEDController
+from metar_monitor import METARStatus, LEDController
+import constants
 
 
 class TestFlightCategoryDetermination(unittest.TestCase):
@@ -186,29 +187,45 @@ class TestConfigLoading(unittest.TestCase):
         mock_file_open.assert_called_once_with(metar_monitor.CONFIG_FILE, 'r')
         mock_json_load.assert_called_once()
         
-        # Should have all default values plus our custom ones
+        # Should have exactly what's in the config file
         self.assertEqual(config["airports"], [{"icao": "KTEST", "name": "Test Airport", "led": 0}])
         self.assertEqual(config["led_count"], 5)
-        self.assertEqual(config["update_interval"], metar_monitor.DEFAULT_CONFIG["update_interval"])
+        self.assertEqual(config, mock_config)
     
     @patch('os.path.exists')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('json.dump')
-    def test_load_config_create_file(self, mock_json_dump, mock_file_open, mock_exists):
-        """Test creating a new config file"""
+    @patch('builtins.print')
+    @patch('sys.exit')
+    def test_load_config_nonexistent_file(self, mock_exit, mock_print, mock_exists):
+        """Test that the application exits when config file doesn't exist"""
         # Set up the test
         mock_exists.return_value = False
         
-        # Call the function
-        config = metar_monitor.load_config()
+        # Call the function - should exit
+        metar_monitor.load_config()
         
         # Verify the result
         mock_exists.assert_called_once_with(metar_monitor.CONFIG_FILE)
-        mock_file_open.assert_called_once_with(metar_monitor.CONFIG_FILE, 'w')
-        mock_json_dump.assert_called_once()
+        mock_exit.assert_called_once_with(1)
+        mock_print.assert_called_once()  # Should print an error message
         
-        # Should return the default config
-        self.assertEqual(config, metar_monitor.DEFAULT_CONFIG)
+    @patch('os.path.exists')
+    @patch('builtins.open', mock_open(read_data="invalid json"))
+    @patch('json.load')
+    @patch('builtins.print')
+    @patch('sys.exit')
+    def test_load_config_invalid_json(self, mock_exit, mock_print, mock_json_load, mock_exists):
+        """Test that the application exits when config file contains invalid JSON"""
+        # Set up the test
+        mock_exists.return_value = True
+        mock_json_load.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
+        
+        # Call the function - should exit
+        metar_monitor.load_config()
+        
+        # Verify the result
+        mock_exists.assert_called_once_with(metar_monitor.CONFIG_FILE)
+        mock_exit.assert_called_once_with(1)
+        mock_print.assert_called_once()  # Should print an error message
 
 
 if __name__ == "__main__":

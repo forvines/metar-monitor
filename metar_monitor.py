@@ -11,9 +11,11 @@ Displays color-coded status for flight conditions:
 This version supports WS2811 LED output on a Raspberry Pi
 """
 
+import signal
 import json
 import time
 import os
+import sys
 import logging
 import math
 from logging.handlers import TimedRotatingFileHandler
@@ -30,7 +32,7 @@ from weather_status import determine_status_color, get_warning_text
 from constants import (
     COLORS, CATEGORY_COLOR_MAP, FLIGHT_CATEGORIES, 
     THRESHOLDS, DEFAULT_BUTTON_PIN,
-    DEFAULT_CONFIG, CONFIG_FILE
+    CONFIG_FILE
 )
 
 # Display modes
@@ -63,15 +65,15 @@ try:
     from rpi_ws281x import PixelStrip, Color
     # LED RGB color values - only define if the library is available
     LED_COLORS = {
-        "GREEN": Color(0, 255, 0),    # VFR
+        "GREEN": Color(255, 0, 0),    # VFR
         "BLUE": Color(0, 0, 255),     # MVFR
-        "RED": Color(255, 0, 0),      # IFR
-        "PURPLE": Color(128, 0, 128), # LIFR
+        "RED": Color(0, 255, 0),      # IFR
+        "PURPLE": Color(0, 128, 128), # LIFR
         "YELLOW": Color(255, 255, 0), # Wind/Storm warnings
         "WHITE": Color(255, 255, 255), # Mode indicator - METAR
-        "CYAN": Color(0, 255, 255),   # Mode indicator - TAF 6h
-        "ORANGE": Color(255, 165, 0), # Mode indicator - TAF 12h
-        "PINK": Color(255, 105, 180), # Mode indicator - TAF 24h
+        "CYAN": Color(255, 0, 255),   # Mode indicator - TAF 6h
+        "ORANGE": Color(165, 255, 0), # Mode indicator - TAF 12h
+        "PINK": Color(105, 255, 180), # Mode indicator - TAF 24h
         "OFF": Color(0, 0, 0)         # Off
     }
     LED_ENABLED = True
@@ -80,26 +82,20 @@ except ImportError:
     logging.info("rpi_ws281x library not found. Running in console-only mode.")
 
 def load_config():
-    """Load configuration from file or create default if not exists"""
+    """Load configuration from file"""
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, 'r') as f:
                 config = json.load(f)
-                # Ensure all required keys are present
-                for key in DEFAULT_CONFIG:
-                    if key not in config:
-                        config[key] = DEFAULT_CONFIG[key]
                 return config
         except Exception as e:
             logging.error(f"Error loading config file: {e}")
-            logging.warning("Using default configuration")
-            return DEFAULT_CONFIG
+            print(f"Error loading configuration file: {e}")
+            sys.exit(1)
     else:
-        # Create default config file
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4)
-        logging.info(f"Created default configuration file: {CONFIG_FILE}")
-        return DEFAULT_CONFIG
+        logging.error(f"Configuration file '{CONFIG_FILE}' not found")
+        print(f"Error: Configuration file '{CONFIG_FILE}' not found. Please create it before running.")
+        sys.exit(1)
 
 class LEDController:
     def __init__(self, config):
@@ -170,7 +166,7 @@ class METARStatus:
         # Print weather warning
         wind_threshold = THRESHOLDS["WINDS"]
         gust_threshold = THRESHOLDS["GUSTS"]
-        crosswind_threshold = self.config.get("crosswind_threshold", 10)
+        crosswind_threshold = THRESHOLDS["CROSSWINDS"]
         print(f"{COLORS['YELLOW']}Yellow: Strong winds (>{wind_threshold}kts), gusts (>{gust_threshold}kts), thunderstorms, or crosswind (>{crosswind_threshold}kts){COLORS['RESET']}")
         
         print("=" * 60)

@@ -113,7 +113,8 @@ class TestWeatherStatus(unittest.TestCase):
         # Test crosswind
         wind_data = {
             "crosswind": 15.0,
-            "active_runway": {"name": "16L", "direction": 160}
+            "active_runway": {"name": "16L", "direction": 160},
+            "direction": 260
         }
         warning_text = get_warning_text(
             "YELLOW", 
@@ -121,7 +122,7 @@ class TestWeatherStatus(unittest.TestCase):
             "KSEA",
             wind_data
         )
-        self.assertEqual(warning_text, " - Crosswind 15.0KT on RWY 16L")
+        self.assertEqual(warning_text, " - Crosswind 15.0KT from 260° on RWY 16L")
         
         # Test no warning for non-yellow status
         warning_text = get_warning_text(

@@ -26,7 +26,7 @@ def determine_status_color(raw_weather_text: str, flight_category: str, wind_dat
     """
     # Check for crosswind threshold exceedance first if wind data is provided
     if wind_data and wind_data.get("crosswind") is not None:
-        crosswind_threshold = 10  # Default - should be from config in real use
+        crosswind_threshold = THRESHOLDS["CROSSWINDS"]
         if wind_data["crosswind"] > crosswind_threshold:
             return "YELLOW"
     
@@ -71,15 +71,16 @@ def get_warning_text(status_color: str, raw_text: str, airport_id: str = None, w
         return ""
         
     # Check if we have wind data with crosswind information
-    if wind_data and "crosswind" in wind_data and "active_runway" in wind_data:
+    if wind_data and "crosswind" in wind_data and "active_runway" in wind_data and "direction" in wind_data:
         crosswind = wind_data["crosswind"]
         runway = wind_data["active_runway"]["name"]
+        wind_direction = wind_data["direction"]
         threshold = 10  # Default - should be from config in real use
         if config:
             threshold = config.get("crosswind_threshold", 10)
             
         if crosswind > threshold:
-            return f" - Crosswind {crosswind:.1f}KT on RWY {runway}"
+            return f" - Crosswind {crosswind:.1f}KT from {wind_direction:03d}° on RWY {runway}"
     
     # Check for thunderstorms (highest priority)
     if any(pattern in raw_text for pattern in REGEX_PATTERNS["THUNDERSTORM"]):
