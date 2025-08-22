@@ -1004,7 +1004,8 @@ def main():
                 # Update LED display based on current mode
                 metar_status.update_led_display()
     
-    except KeyboardInterrupt:
+    #except KeyboardInterrupt:
+    finally:
         logger.info("KeyboardInterrupt received, shutting down")
         # Clean up resources
         if button_handler:
