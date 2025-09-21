@@ -71,9 +71,6 @@ try:
         "PURPLE": Color(0, 128, 128), # LIFR
         "YELLOW": Color(255, 255, 0), # Wind/Storm warnings
         "WHITE": Color(255, 255, 255), # Mode indicator - METAR
-        "CYAN": Color(255, 0, 255),   # Mode indicator - TAF 6h
-        "ORANGE": Color(165, 255, 0), # Mode indicator - TAF 12h
-        "PINK": Color(105, 255, 180), # Mode indicator - TAF 24h
         "OFF": Color(0, 0, 0)         # Off
     }
     LED_ENABLED = True
@@ -326,27 +323,51 @@ class METARStatus:
         if self.legend_leds:
             self.set_legend_leds()
             
-        # Update the mode indicator LED
-        mode_led_index = self.config.get("mode_indicator_led")
-        if mode_led_index is not None and mode_led_index < self.config.get("led_count", 0):
-            # Map display mode to indicator color
+        # Update the mode LEDs (METAR and TAF hour indicators)
+        mode_leds_cfg = self.config.get("mode_leds")
+        if mode_leds_cfg and self.led_controller:
+            # collect all mode-led indices so we can clear them first
+            all_mode_leds = []
+            if "metar" in mode_leds_cfg:
+                all_mode_leds.append(mode_leds_cfg["metar"])
+            taf_map = mode_leds_cfg.get("taf", {})
+            # taf_map values could be strings in JSON; normalize to int
+            for v in taf_map.values():
+                try:
+                    all_mode_leds.append(int(v))
+                except Exception:
+                    continue
+
+            # Turn off all mode LEDs
+            for idx in all_mode_leds:
+                if isinstance(idx, int) and idx < self.config.get("led_count", 0):
+                    self.led_controller.set_led(idx, "OFF")
+
+            # Decide which one to light
+            active_idx = None
+            indicator_color = "WHITE"
             if self.display_mode == DisplayMode.METAR:
-                indicator_color = "WHITE"  # METAR mode
-            elif self.display_mode == DisplayMode.TAF:
-                # Choose color based on forecast hour
-                if self.current_forecast_hour <= 8:
-                    indicator_color = "CYAN"    # TAF 8h or less
-                elif self.current_forecast_hour <= 12:
-                    indicator_color = "ORANGE"  # TAF 12h or less
-                else:
-                    indicator_color = "PINK"    # TAF >12h
+                active_idx = mode_leds_cfg.get("metar")
             else:
-                indicator_color = "OFF"    # Unknown mode
-            
-            # Set the indicator LED
-            self.led_controller.set_led(mode_led_index, indicator_color)
-            self.logger.debug(f"Set mode indicator LED {mode_led_index} to {indicator_color}")
-    
+                # choose configured TAF LED by hour, or the closest
+                active_idx = None
+                if taf_map:
+                    # exact match first
+                    key = str(self.current_forecast_hour)
+                    if key in taf_map:
+                        active_idx = int(taf_map[key])
+                    else:
+                        # closest numeric key
+                        try:
+                            closest_key = min(taf_map.keys(), key=lambda k: abs(int(k) - self.current_forecast_hour))
+                            active_idx = int(taf_map[closest_key])
+                        except Exception:
+                            active_idx = None
+
+            if active_idx is not None and active_idx < self.config.get("led_count", 0):
+                self.led_controller.set_led(active_idx, indicator_color)
+                self.logger.debug(f"Set mode LED {active_idx} to {indicator_color}")
+
     def _fetch_raw_metar_data(self, airports):
         """Fetch raw METAR data from the API for the specified airports
         
@@ -522,17 +543,10 @@ class METARStatus:
         # Print the mode indicator LED if it exists
         mode_led_index = self.config.get("mode_indicator_led")
         if mode_led_index is not None and mode_led_index < self.config.get("led_count", 0):
-            # Determine indicator color based on current mode
+            indicator_color = "WHITE"
             if self.display_mode == DisplayMode.METAR:
-                indicator_color = "WHITE"
                 mode_name = "METAR Mode"
             else:
-                if self.current_forecast_hour <= 8:
-                    indicator_color = "CYAN"
-                elif self.current_forecast_hour <= 12:
-                    indicator_color = "ORANGE"
-                else:
-                    indicator_color = "PINK"
                 mode_name = f"TAF {self.current_forecast_hour}h Mode"
                 
             color_code = COLORS.get(indicator_color, COLORS["RESET"])
