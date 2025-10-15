@@ -18,45 +18,23 @@ import os
 import sys
 import logging
 import math
+import threading
+import select
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime, timedelta
-from metar_api_client import METARAPIClient, APIRequestFailed
-from airport_utils import extract_wind_data, calculate_airport_crosswind
-from metar_processor import determine_flight_category
-from taf_processor import (
-    process_taf_data as process_taf_data_module,
-    get_most_recent_taf, find_relevant_forecast_period,
-    format_clouds_info, format_wind, process_forecast_period
-)
-from weather_status import determine_status_color, get_warning_text
+from airport_data_manager import AirportDataManager
+from metar_display import DisplayManager
+from metar_modes import ModeManager
+from constants import DisplayMode
 from constants import (
     COLORS, CATEGORY_COLOR_MAP, FLIGHT_CATEGORIES, 
     THRESHOLDS, DEFAULT_BUTTON_PIN,
-    CONFIG_FILE
+    DEFAULT_LIGHT_SENSOR_UPDATE_INTERVAL, DEFAULT_MIN_BRIGHTNESS, DEFAULT_MAX_BRIGHTNESS,
+    CONFIG_FILE, DISPLAY_FORMATTING, MODE_INDICATOR_COLOR, MODE_NAMES
 )
+from light_sensor import LightSensor
 
-# Display modes
-class DisplayMode:
-    """Display modes for the application"""
-    METAR = 0     # Show current conditions (default)
-    TAF = 1       # Show forecast data
-    
-    @staticmethod
-    def get_name(mode, forecast_hour=None):
-        """Get the name of a display mode
-        
-        Args:
-            mode: The display mode
-            forecast_hour: The current forecast hour (if in TAF mode)
-        """
-        if mode == DisplayMode.METAR:
-            return "METAR (Current Conditions)"
-        elif mode == DisplayMode.TAF:
-            if forecast_hour:
-                return f"TAF {forecast_hour}-Hour Forecast"
-            else:
-                return "TAF Forecast"
-        return "Unknown"
+
 
 # Try to import the rpi_ws281x library for LED control
 LED_ENABLED = False
@@ -78,6 +56,31 @@ try:
 except ImportError:
     logging.info("rpi_ws281x library not found. Running in console-only mode.")
 
+class KeyboardHandler:
+    def __init__(self, callback):
+        self.callback = callback
+        self.running = False
+        self.thread = None
+    
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self._input_loop, daemon=True)
+        self.thread.start()
+        return True
+    
+    def stop(self):
+        self.running = False
+    
+    def _input_loop(self):
+        while self.running:
+            try:
+                if select.select([sys.stdin], [], [], 0.1)[0]:
+                    key = sys.stdin.read(1)
+                    if key.lower() == 'm':
+                        self.callback()
+            except:
+                pass
+
 def load_config():
     """Load configuration from file"""
     if os.path.exists(CONFIG_FILE):
@@ -95,10 +98,13 @@ def load_config():
         sys.exit(1)
 
 class LEDController:
-    def __init__(self, config):
+    def __init__(self, config, light_sensor=None):
         self.strip = None
         self.config = config
         self.initialized = False
+        self.light_sensor = light_sensor
+        self.current_brightness = config["led_brightness"]
+        self.last_brightness_update = 0
         
         if LED_ENABLED:
             try:
@@ -124,11 +130,39 @@ class LEDController:
                 logging.error(f"Error initializing LED strip: {e}")
                 self.initialized = False
     
+    def update_brightness(self):
+        """Update LED brightness based on light sensor"""
+        if not self.light_sensor or not self.initialized:
+            return
+            
+        current_time = time.time()
+        update_interval = self.config.get("light_sensor_update_interval", DEFAULT_LIGHT_SENSOR_UPDATE_INTERVAL)
+        
+        # Only update brightness periodically
+        if current_time - self.last_brightness_update < update_interval:
+            return
+            
+        min_brightness = self.config.get("min_brightness", DEFAULT_MIN_BRIGHTNESS)
+        max_brightness = self.config.get("max_brightness", DEFAULT_MAX_BRIGHTNESS)
+        
+        new_brightness = self.light_sensor.get_auto_brightness(min_brightness, max_brightness)
+        
+        if new_brightness != self.current_brightness:
+            self.current_brightness = new_brightness
+            self.strip.setBrightness(new_brightness)
+            self.strip.show()
+            logging.info(f"LED brightness adjusted to {new_brightness}%")
+            
+        self.last_brightness_update = current_time
+    
     def set_led(self, index, color_name):
         """Set an LED to a specific color"""
         if not self.initialized or index >= self.config["led_count"]:
             logging.warning(f"LED index {index} out of range or LED strip not initialized.")
             return
+            
+        # Update brightness before setting LED
+        self.update_brightness()
             
         if color_name in LED_COLORS:
             color = LED_COLORS[color_name]
@@ -149,768 +183,84 @@ class LEDController:
         self.strip.show()
 
 class METARStatus:
-    def print_color_legend(self):
-        """Print a legend for the colors used in the display"""
-        self.logger.info("Displaying color legend")
-        print("\n" + "=" * 60)
-        print("Color Legend:")
-        
-        # Print flight categories
-        for category, color in CATEGORY_COLOR_MAP.items():
-            description = FLIGHT_CATEGORIES.get(category, "")
-            print(f"{COLORS[color]}{color.title()}: {category} ({description}){COLORS['RESET']}")
-        
-        # Print weather warning
-        wind_threshold = THRESHOLDS["WINDS"]
-        gust_threshold = THRESHOLDS["GUSTS"]
-        crosswind_threshold = THRESHOLDS["CROSSWINDS"]
-        print(f"{COLORS['YELLOW']}Yellow: Strong winds (>{wind_threshold}kts), gusts (>{gust_threshold}kts), thunderstorms, or crosswind (>{crosswind_threshold}kts){COLORS['RESET']}")
-        
-        print("=" * 60)
+    """Main METAR Status class - now simplified using manager classes"""
     
-    def print_led_mapping(self):
-        """Print the mapping between LEDs and airports"""
-        self.logger.info("Displaying LED to airport mapping")
-        print("\nLED to Airport Mapping:")
-        for airport_info in self.config["airports"]:
-            icao = airport_info["icao"]
-            name = airport_info["name"]
-            led = airport_info["led"]
-            if led < self.config.get("led_count", 0):
-                print(f"LED {led:2d}: {icao} - {name}")
-        
     def __init__(self, config, led_controller=None):
         self.config = config
-        self.last_update = None
-        self.airport_data = {}
-        self.led_controller = led_controller
-        self.display_mode = DisplayMode.METAR  # Start in METAR mode
-        self.current_forecast_hour = 6  # Default forecast hour for TAF mode
-        self.forecast_hour_index = 0  # Index into forecast_hours list
-        
-        # Set up logging first
         self.logger = logging.getLogger("metar_status")
         
-        # Create a mapping of airports to LED indices
-        self.airport_to_led = {}
-        for airport_info in config["airports"]:
-            icao = airport_info["icao"]
-            led_index = airport_info["led"]
-            if led_index < config.get("led_count", 0):
-                self.airport_to_led[icao] = led_index
-        
-        # Create a mapping of legend LEDs
-        self.legend_leds = {}
-        if "legend" in config:
-            for legend_item in config["legend"]:
-                name = legend_item["name"]
-                color = legend_item["color"]
-                led = legend_item["led"]
-                self.legend_leds[led] = {"name": name, "color": color}
-            self.logger.debug(f"Initialized {len(self.legend_leds)} legend LEDs")
-        
-        # Initialize API client
-        self.api_client = METARAPIClient(
-            base_metar_url=config["metar_url"],
-            base_taf_url=config["taf_url"]
-        )
-        self.logger.info("Initialized METAR Status with API client")
+        # Initialize managers
+        self.data_manager = AirportDataManager(config)
+        self.display_manager = DisplayManager(config, led_controller)
+        self.mode_manager = ModeManager(config, led_controller)
         
         # Set up legend LEDs if we have an LED controller
-        if self.led_controller and self.legend_leds:
-            self.set_legend_leds()
-            
-    def set_legend_leds(self):
-        """Set the legend LEDs to their corresponding colors
+        if led_controller:
+            self.mode_manager._set_legend_leds()
         
-        This sets up the legend LEDs according to the configuration, displaying
-        the different flight categories and conditions directly on the LED strip.
-        """
-        if not self.led_controller:
-            return
-        
-        self.logger.info("Setting up legend LEDs")
-        for led_index, legend_item in self.legend_leds.items():
-            color = legend_item["color"]
-            name = legend_item["name"]
-            
-            # Set the LED to its designated color
-            self.led_controller.set_led(led_index, color)
-            self.logger.debug(f"Set legend LED {led_index} to {color} ({name})")
-            
-        self.logger.info(f"Legend display initialized with {len(self.legend_leds)} LEDs")
-        
+        self.logger.info("Initialized METAR Status with manager classes")
+    
+    
     def toggle_display_mode(self):
-        """Cycle through display modes: METAR -> TAF (6h) -> TAF (12h) -> TAF (24h) -> METAR"""
-        forecast_hours = self.config["forecast_hours"]
-        if not isinstance(forecast_hours, list) or not forecast_hours:
-            forecast_hours = [6]  # Default if not defined or empty
-        
-        if self.display_mode == DisplayMode.METAR:
-            # Switch to TAF mode with the first forecast hour
-            self.display_mode = DisplayMode.TAF
-            self.forecast_hour_index = 0
-            self.current_forecast_hour = forecast_hours[self.forecast_hour_index]
-            self.logger.info(f"Display mode changed to TAF {self.current_forecast_hour}-Hour Forecast")
-        else:
-            # Already in TAF mode, cycle through forecast hours
-            self.forecast_hour_index = (self.forecast_hour_index + 1) % len(forecast_hours)
-            
-            # If we wrapped around to the first hour, switch back to METAR
-            if self.forecast_hour_index == 0:
-                self.display_mode = DisplayMode.METAR
-                self.logger.info("Display mode changed to METAR (Current Conditions)")
-            else:
-                self.current_forecast_hour = forecast_hours[self.forecast_hour_index]
-                self.logger.info(f"Display mode changed to TAF {self.current_forecast_hour}-Hour Forecast")
-            
-        # Update the LED display based on the new mode
-        self.update_led_display()
+        """Toggle display mode using the mode manager"""
+        mode = self.mode_manager.toggle_display_mode()
+        self.mode_manager.update_led_display(self.data_manager.airport_data)
         
         # Print status message
-        print("\n" + "=" * 60)
-        if self.display_mode == DisplayMode.METAR:
-            print(f"Display mode changed to: {DisplayMode.get_name(self.display_mode)}")
+        print("\n" + DISPLAY_FORMATTING["HEADER_LINE"])
+        if self.mode_manager.display_mode == DisplayMode.METAR:
+            print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode)}")
+        elif self.mode_manager.display_mode == DisplayMode.TAF:
+            print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode, self.mode_manager.current_forecast_hour)}")
         else:
-            print(f"Display mode changed to: {DisplayMode.get_name(self.display_mode, self.current_forecast_hour)}")
-        print("=" * 60)
+            print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode)}")
+        print(DISPLAY_FORMATTING["HEADER_LINE"])
         
-        return self.display_mode
-        
+        return mode
+    
     def update_led_display(self):
-        """Update LEDs based on current display mode"""
-        if not self.led_controller:
-            self.logger.debug("LED controller not available, skipping LED display update")
-            return
-            
-        self.logger.info("Updating LED display in %s mode", 
-                       "METAR" if self.display_mode == DisplayMode.METAR else 
-                       f"TAF {self.current_forecast_hour}h")
-        
-        # Update airport LEDs if we have data
-        if self.airport_data:
-            for airport, data in self.airport_data.items():
-                if airport not in self.airport_to_led:
-                    continue
-                    
-                led_index = self.airport_to_led[airport]
-                
-                if self.display_mode == DisplayMode.METAR:
-                    # Show current conditions
-                    status_color = data.get("status_color", "OFF")
-                else:
-                    # Use the current forecast hour
-                    forecast_hour = self.current_forecast_hour
-                    
-                    # Show forecast for the selected hour
-                    if "forecasts" in data and data["forecasts"]:
-                        if forecast_hour in data["forecasts"]:
-                            # Use the forecast for the selected hour
-                            status_color = data["forecasts"][forecast_hour]["color"]
-                        else:
-                            # Find the closest available forecast hour
-                            available_hours = sorted(data["forecasts"].keys())
-                            closest_hour = min(available_hours, key=lambda x: abs(x - forecast_hour))
-                            status_color = data["forecasts"][closest_hour]["color"]
-                            self.logger.debug(f"Using {closest_hour}h forecast for {airport} instead of requested {forecast_hour}h")
-                    else:
-                        # No forecast data, use OFF
-                        status_color = "OFF"
-                
-                self.led_controller.set_led(led_index, status_color)
-        
-        # Update the legend LEDs to ensure they stay at their proper colors
-        if self.legend_leds:
-            self.set_legend_leds()
-            
-        # Update the mode LEDs (METAR and TAF hour indicators)
-        mode_leds_cfg = self.config.get("mode_leds")
-        if mode_leds_cfg and self.led_controller:
-            # collect all mode-led indices so we can clear them first
-            all_mode_leds = []
-            if "metar" in mode_leds_cfg:
-                all_mode_leds.append(mode_leds_cfg["metar"])
-            taf_map = mode_leds_cfg.get("taf", {})
-            # taf_map values could be strings in JSON; normalize to int
-            for v in taf_map.values():
-                try:
-                    all_mode_leds.append(int(v))
-                except Exception:
-                    continue
+        """Update LEDs using the mode manager"""
+        self.mode_manager.update_led_display(self.data_manager.airport_data)
 
-            # Turn off all mode LEDs
-            for idx in all_mode_leds:
-                if isinstance(idx, int) and idx < self.config.get("led_count", 0):
-                    self.led_controller.set_led(idx, "OFF")
-
-            # Decide which one to light
-            active_idx = None
-            indicator_color = "WHITE"
-            if self.display_mode == DisplayMode.METAR:
-                active_idx = mode_leds_cfg.get("metar")
-            else:
-                # choose configured TAF LED by hour, or the closest
-                active_idx = None
-                if taf_map:
-                    # exact match first
-                    key = str(self.current_forecast_hour)
-                    if key in taf_map:
-                        active_idx = int(taf_map[key])
-                    else:
-                        # closest numeric key
-                        try:
-                            closest_key = min(taf_map.keys(), key=lambda k: abs(int(k) - self.current_forecast_hour))
-                            active_idx = int(taf_map[closest_key])
-                        except Exception:
-                            active_idx = None
-
-            if active_idx is not None and active_idx < self.config.get("led_count", 0):
-                self.led_controller.set_led(active_idx, indicator_color)
-                self.logger.debug(f"Set mode LED {active_idx} to {indicator_color}")
-
-    def _fetch_raw_metar_data(self, airports):
-        """Fetch raw METAR data from the API for the specified airports
-        
-        Makes an HTTP request to the Aviation Weather API to retrieve METAR data 
-        for multiple airports in a single batch request. Processes the response
-        to ensure only the most recent observation for each airport is kept.
-        
-        Args:
-            airports (list): List of airport ICAO identifiers
-            
-        Returns:
-            dict: Dictionary mapping airport IDs to their most recent METAR data
-                  Empty dictionary if the request fails
-        """
-        try:
-            self.logger.info("Fetching METAR data for %d airports", len(airports))
-            # Use the API client to fetch METAR data with retry and timeout
-            all_metar_data = self.api_client.fetch_metar_data(airports)
-            
-            # Process the METAR data to get the most recent observations
-            airport_metars = self.api_client.get_most_recent_metars(all_metar_data)
-            
-            self.logger.info("Successfully retrieved METAR data for %d airports", len(airport_metars))
-            return airport_metars
-            
-        except APIRequestFailed as e:
-            self.logger.error("API request failed: %s", str(e))
-            return {}
-        except Exception as e:
-            self.logger.exception("Unexpected error fetching METAR data: %s", str(e))
-            return {}
-            
-    def _process_airport_data(self, station_id, metar_data, taf_data, airport_name):
-        """Process METAR and TAF data for a single airport
-        
-        Takes raw METAR data for an airport and processes it to determine
-        flight category and status color. Stores the processed data in the
-        airport_data dictionary and processes TAF data if available.
-        
-        Args:
-            station_id (str): The ICAO identifier of the airport
-            metar_data (dict): The raw METAR data from the API
-            taf_data (list): List of TAF data objects for the airport, or None
-            airport_name (str): The friendly name of the airport
-            
-        Returns:
-            tuple: (status_color, flight_category) - The color and flight category 
-                  for this airport's current conditions
-        """
-        raw_text = metar_data.get("rawOb")
-        
-        # Determine flight category based on ceiling and visibility
-        flight_category = self.determine_flight_category(metar_data)
-        
-        # Use airport_utils to calculate crosswind using runway data from config
-        wind_data = calculate_airport_crosswind(self.config, station_id, raw_text)
-        
-        # Determine status color with crosswind information
-        status_color = self.determine_status_color(raw_text, flight_category, wind_data)
-        
-        # Initialize airport data
-        self.airport_data[station_id] = {
-            "raw_metar": raw_text,
-            "flight_category": flight_category,
-            "status_color": status_color,
-            "forecast": None,
-            "forecast_category": None,
-            "forecast_color": None,
-            "name": airport_name,
-            "wind_data": wind_data  # Store wind and crosswind data
-        }
-        
-        # Process TAF data if available
-        if taf_data:
-            self.process_taf_data(station_id, taf_data)
-            
-        return status_color, flight_category
-            
-    def _display_airport_data(self, station_id, status_color, flight_category):
-        """Display formatted data for a single airport
-        
-        Prints formatted information about an airport's weather conditions to the console
-        with appropriate color coding. Also controls the associated LED if available.
-        
-        Args:
-            station_id (str): The ICAO identifier of the airport
-            status_color (str): The color name representing the airport's status
-            flight_category (str): The flight category of the airport ('VFR', 'MVFR', etc.)
-        """
-        airport_data = self.airport_data[station_id]
-        raw_text = airport_data["raw_metar"]
-        
-        # Format the display
-        color_code = COLORS.get(status_color, COLORS["RESET"])
-        status_text = flight_category if flight_category else "Unknown"
-        warning_text = self.get_warning_text(status_color, raw_text, station_id)
-        
-        print(f"{station_id} - {airport_data['name']}: {color_code}{status_text}{warning_text}{COLORS['RESET']}")
-        print(f"  METAR: {raw_text}")
-        
-        # Display forecast information if available
-        if "forecasts" in airport_data:
-            forecasts = airport_data["forecasts"]
-            if forecasts:
-                print(f"  Forecasts:")
-                for hours, forecast in sorted(forecasts.items()):
-                    forecast_color = COLORS.get(forecast["color"], COLORS["RESET"])
-                    forecast_text = forecast["category"]
-                    print(f"    {hours}h: {forecast_color}{forecast_text}{COLORS['RESET']} - {forecast['taf_summary']}")
-        
-        # Set the LED for this airport if we have an LED controller
-        if self.led_controller and station_id in self.airport_to_led:
-            led_index = self.airport_to_led[station_id]
-            print(f"  Setting LED {led_index} to {status_color}")
-            self.logger.debug(f"Setting LED {led_index} for {station_id} to {status_color}")
-            self.led_controller.set_led(led_index, status_color)
-            
-        print("-" * 60)
+    def print_color_legend(self):
+        """Print color legend using display manager"""
+        self.display_manager.print_color_legend()
+    
+    def print_led_mapping(self):
+        """Print LED mapping using display manager"""
+        self.display_manager.print_led_mapping()
     
     def print_led_summary(self):
-        """Print a summary of all LEDs with their colors and airport names"""
-        self.logger.info("Displaying LED summary")
-        print("\n" + "=" * 60)
-        print("LED Summary:")
-        print("-" * 60)
-        
-        # Get all airports sorted by LED index
-        sorted_airports = sorted(
-            [(info["led"], icao, info["name"]) 
-             for icao, info in zip(
-                 [airport["icao"] for airport in self.config["airports"]],
-                 [airport for airport in self.config["airports"]]
-             ) 
-             if info["led"] < self.config.get("led_count", 0)],
-            key=lambda x: x[0]
+        """Print LED summary using display manager"""
+        self.display_manager.print_led_summary(
+            self.data_manager.airport_data, 
+            self.mode_manager.display_mode, 
+            self.mode_manager.current_forecast_hour
         )
-        
-        # Print each LED with its color and airport
-        for led_index, icao, name in sorted_airports:
-            if icao in self.airport_data:
-                if self.display_mode == DisplayMode.METAR:
-                    # Show current conditions
-                    status_color = self.airport_data[icao].get("status_color", "OFF")
-                else:
-                    # Use the current forecast hour
-                    forecast_hour = self.current_forecast_hour
-                    status_color = "OFF"
-                    
-                    # Show forecast for the selected hour
-                    if "forecasts" in self.airport_data[icao] and self.airport_data[icao]["forecasts"]:
-                        if forecast_hour in self.airport_data[icao]["forecasts"]:
-                            status_color = self.airport_data[icao]["forecasts"][forecast_hour]["color"]
-                        elif self.airport_data[icao]["forecasts"]:
-                            # Find the closest available forecast hour
-                            available_hours = sorted(self.airport_data[icao]["forecasts"].keys())
-                            closest_hour = min(available_hours, key=lambda x: abs(x - forecast_hour))
-                            status_color = self.airport_data[icao]["forecasts"][closest_hour]["color"]
-                
-                # Get the color code for display
-                color_code = COLORS.get(status_color, COLORS["RESET"])
-                flight_category = self.airport_data[icao].get("flight_category", "Unknown")
-                
-                # Get warning text if applicable
-                warning_text = ""
-                if status_color == "YELLOW":
-                    warning_text = self.get_warning_text(
-                        status_color, self.airport_data[icao].get("raw_metar", ""), icao
-                    )
-                
-                # Print the LED summary line
-                print(f"LED {led_index:2d}: {color_code}■{COLORS['RESET']} {icao} - {color_code}{flight_category}{warning_text}{COLORS['RESET']} - {name}")
-        
-        # Print the mode indicator LED if it exists
-        mode_led_index = self.config.get("mode_indicator_led")
-        if mode_led_index is not None and mode_led_index < self.config.get("led_count", 0):
-            indicator_color = "WHITE"
-            if self.display_mode == DisplayMode.METAR:
-                mode_name = "METAR Mode"
-            else:
-                mode_name = f"TAF {self.current_forecast_hour}h Mode"
-                
-            color_code = COLORS.get(indicator_color, COLORS["RESET"])
-            print(f"LED {mode_led_index:2d}: {color_code}■{COLORS['RESET']} Mode Indicator - {color_code}{mode_name}{COLORS['RESET']}")
-        
-        print("=" * 60)
     
     def fetch_metar_data(self):
-        """Fetch and process METAR data for all configured airports"""
-        # Get list of airport IDs
-        airports = [airport["icao"] for airport in self.config["airports"]]
-        
+        """Fetch and process METAR data using data manager"""
         # Print legends and headers
         self.print_color_legend()
         self.print_led_mapping()
         print("\nFetching METAR data for airports...")
-        print("=" * 60)
+        print(DISPLAY_FORMATTING["HEADER_LINE"])
         
-        # Reset data
-        self.airport_data = {}
-        self.last_update = datetime.now()
-        
-        # Create a mapping of ICAO codes to airport names for easy lookup
-        airport_names = {airport["icao"]: airport["name"] for airport in self.config["airports"]}
-        
-        # Step 1: Fetch METAR data
-        airport_metars = self._fetch_raw_metar_data(airports)
-        if not airport_metars:
-            self.logger.error("No METAR data was retrieved.")
+        # Fetch and process data using data manager
+        success = self.data_manager.fetch_and_process_data()
+        if not success:
             return False
-            
-        # Step 2: Fetch TAF data for all airports at once
-        all_taf_data = self.fetch_all_taf_data(airports)
         
-        # Step 3: Process each airport's data
-        for station_id, metar_data in airport_metars.items():
-            if station_id in airport_names:
-                # Process data for this airport
-                taf_data = all_taf_data.get(station_id, None)
-                status_color, flight_category = self._process_airport_data(
-                    station_id, metar_data, taf_data, airport_names[station_id]
-                )
-                
-                # Display the results
-                self._display_airport_data(station_id, status_color, flight_category)
+        # Display results for each airport
+        for station_id, airport_data in self.data_manager.airport_data.items():
+            self.display_manager.display_airport_data(station_id, airport_data)
         
-        # Print a summary of all LEDs with their colors
+        # Print LED summary
         self.print_led_summary()
         
-        return len(self.airport_data) > 0
+        return True
     
-    def fetch_all_taf_data(self, airports):
-        """Fetch TAF data for all airports at once using batch API
-        
-        Uses the API client to fetch TAF data with retry logic, timeout handling,
-        and proper error logging.
-        
-        Args:
-            airports (list): List of airport ICAO identifiers
-            
-        Returns:
-            dict: Dictionary mapping airport IDs to lists of their TAF data
-                 Empty dictionary if the request fails
-        """
-        try:
-            self.logger.info("Fetching TAF data for %d airports", len(airports))
-            
-            # Use the API client to fetch TAF data with retry and timeout
-            taf_data_list = self.api_client.fetch_taf_data(airports)
-            
-            # Process the TAF data to group by airport
-            all_taf_data = self.api_client.group_tafs_by_airport(taf_data_list)
-            
-            self.logger.info("Successfully retrieved TAF data for %d airports", len(all_taf_data))
-            return all_taf_data
-            
-        except APIRequestFailed as e:
-            self.logger.error("TAF API request failed: %s", str(e))
-            return {}
-        except Exception as e:
-            self.logger.exception("Unexpected error fetching TAF data: %s", str(e))
-            return {}
-    
-    def _get_most_recent_taf(self, taf_data_list):
-        """Extract the most recent TAF from a list of TAFs
-        
-        Searches a list of TAF data objects for the most recent one, prioritizing
-        those marked with the mostRecent=1 flag. Falls back to the first TAF in the
-        list if none have this flag set.
-        
-        Args:
-            taf_data_list (list): List of TAF data objects from the API
-            
-        Returns:
-            dict: The most recent TAF data object, or None if the list is empty
-        """
-        if not taf_data_list:
-            return None
-            
-        # First look for the TAF with mostRecent=1 flag
-        for taf in taf_data_list:
-            if taf.get("mostRecent") == 1:
-                return taf
-                
-        # If no mostRecent flag found, fall back to first TAF
-        return taf_data_list[0]
-        
-    def _find_relevant_forecast_period(self, forecast_periods, target_time):
-        """Find the forecast period that covers the target time
-        
-        Searches through a list of forecast periods to find the one that includes
-        the specified target time. Converts epoch timestamps to datetime objects
-        for comparison.
-        
-        Args:
-            forecast_periods (list): List of forecast period objects from the TAF data
-            target_time (datetime): The target time to find a forecast for
-            
-        Returns:
-            tuple: (period, from_time) - The matching forecast period and its start time,
-                  or (None, None) if no matching period is found
-        """
-        if not forecast_periods:
-            return None, None
-            
-        for period in forecast_periods:
-            time_from = period.get("timeFrom")
-            time_to = period.get("timeTo")
-            
-            if not time_from or not time_to:
-                continue
-                
-            # Convert epoch times to datetime objects - with type checking
-            try:
-                # Ensure timestamps are integers
-                time_from_int = int(time_from)
-                time_to_int = int(time_to)
-                
-                # Convert to datetime objects
-                from_time = datetime.fromtimestamp(time_from_int)
-                to_time = datetime.fromtimestamp(time_to_int)
-                
-                # Check if target time is within this period
-                if from_time <= target_time <= to_time:
-                    # Return both the period and the from_time for display
-                    return period, from_time
-                
-            except (TypeError, ValueError) as e:
-                # Log the error but continue processing other periods
-                self.logger.warning("Invalid timestamp in forecast period: %s", str(e))
-                continue
-                
-        return None, None
-            
-    def _format_clouds_info(self, clouds):
-        """Format cloud information into a readable string
-        
-        Converts a list of cloud data objects into a formatted string representation
-        of cloud layers (e.g., "BKN025 OVC080").
-        
-        Args:
-            clouds (list): List of cloud data objects, each containing 'cover' and 'base'
-            
-        Returns:
-            str: Formatted string of cloud information (e.g., "BKN025 OVC080")
-                 Empty string if no valid cloud information is available
-        """
-        if not clouds:
-            return ""
-            
-        clouds_info = []
-        for cloud in clouds:
-            cover = cloud.get("cover", "")
-            base = cloud.get("base", "")
-            if cover and base:
-                clouds_info.append(f"{cover}{base}")
-            
-        return " ".join(clouds_info)
-    
-    def _process_forecast_period(self, period, from_time, airport):
-        """Process a single forecast period and return its information
-        
-        Takes a single forecast period from a TAF and extracts the relevant data,
-        formats it for display, and determines the flight category and status color.
-        
-        Args:
-            period (dict): A forecast period object from the TAF data
-            from_time (datetime): The start time of this forecast period
-            airport (str): The ICAO identifier of the airport
-            
-        Returns:
-            dict: A dictionary containing formatted forecast information including
-                  category, color, summary text, and time range, or None if processing fails
-        """
-        if not period or not from_time:
-            return None
-            
-        # Extract forecast data
-        fcst_change = period.get("fcstChange", "")
-        wdir = period.get("wdir", "")
-        wspd = period.get("wspd", "")
-        visib = period.get("visib", "")
-        
-        # Format from time and clouds
-        from_time_str = from_time.strftime("%d%H%M")
-        clouds_str = self._format_clouds_info(period.get("clouds", []))
-        
-        # Format wind and create summary
-        wind_text = self._format_wind(wdir, wspd)
-        taf_summary = f"{fcst_change} {from_time_str} {wind_text}KT {visib} {clouds_str}"
-        
-        # Determine flight category and color
-        forecast_category = self.determine_forecast_category(period)
-        
-        # Create text for weather warnings check
-        forecast_text = f"{wind_text}KT {visib} {clouds_str}"
-        
-        # Calculate crosswind if we have an airport with runway data
-        wind_data = None
-        if airport and "rawText" in period:
-            # Use airport_utils to calculate crosswind using runway data from config
-            wind_data = extract_wind_data(forecast_text)
-            
-            # If we have runway data for this airport, calculate crosswinds
-            wind_data = calculate_airport_crosswind(self.config, airport, forecast_text, wind_data)
-        
-        # Determine status color with wind data for crosswind check
-        forecast_color = self.determine_status_color(forecast_text, forecast_category, wind_data)
-        
-        return {
-            "category": forecast_category,
-            "color": forecast_color,
-            "taf_summary": taf_summary,
-            "time_from": from_time,
-            "time_to": datetime.fromtimestamp(period.get("timeTo")),
-            "wind_data": wind_data
-        }
-            
-    def process_taf_data(self, airport, taf_data_list):
-        """Process TAF data for a specific airport
-        
-        Takes a list of TAF data for an airport and processes it to determine
-        forecast information for the configured forecast hours. Stores the processed
-        data in the airport_data dictionary.
-        
-        This is now mainly a wrapper for the function in the taf_processor module
-        
-        Args:
-            airport (str): The ICAO identifier of the airport
-            taf_data_list (list): List of TAF data objects for the airport
-        """
-        try:
-            self.logger.debug("Processing TAF data for %s", airport)
-            
-            # Get forecast hours from config
-            forecast_hours = self.config["forecast_hours"]
-            if not isinstance(forecast_hours, list):
-                forecast_hours = [forecast_hours]
-                
-            # Use the taf_processor module
-            taf_data = process_taf_data_module(airport, taf_data_list, forecast_hours)
-            
-            # Store the results in airport_data
-            if taf_data["forecast"]:
-                self.airport_data[airport]["forecast"] = taf_data["forecast"]
-                self.airport_data[airport]["forecasts"] = {}
-                
-                processed_hours = 0
-                for hours, forecast in taf_data["forecasts"].items():
-                    # Apply status color using weather_status module
-                    forecast_text = forecast.get("taf_summary", "")
-                    forecast_category = forecast.get("category", "Unknown")
-                    wind_data = forecast.get("wind_data", None)
-                    
-                    # Determine status color with crosswind information
-                    forecast_color = self.determine_status_color(forecast_text, forecast_category, wind_data)
-                    
-                    # Store the forecast information with color
-                    self.airport_data[airport]["forecasts"][hours] = forecast.copy()
-                    self.airport_data[airport]["forecasts"][hours]["color"] = forecast_color
-                    processed_hours += 1
-                    
-                    # For backward compatibility, store the 6-hour forecast (or first forecast if no 6-hour)
-                    if hours == 6 or "forecast_category" not in self.airport_data[airport]:
-                        self.airport_data[airport]["forecast_category"] = forecast_category
-                        self.airport_data[airport]["forecast_color"] = forecast_color
-                        self.airport_data[airport]["forecast_taf_summary"] = forecast.get("taf_summary", "")
-                        
-                self.logger.debug("Successfully processed %d forecast periods for %s", processed_hours, airport)
-            else:
-                self.logger.warning("No valid TAF data found for %s", airport)
-            
-        except Exception as e:
-            self.logger.exception("Error processing TAF data for %s: %s", airport, str(e))
-    
-    def fetch_taf_data(self, airport):
-        """Legacy method for backward compatibility"""
-        pass  # This method is kept for backward compatibility but is no longer used
-            
-    def determine_forecast_category(self, forecast_period):
-        """Determine flight category based on forecast data
-        
-        This now uses the function from the taf_processor module
-        
-        Args:
-            forecast_period: A forecast period object from the TAF data
-            
-        Returns:
-            str: Flight category (VFR, MVFR, IFR, LIFR, or Unknown)
-        """
-        from taf_processor import determine_forecast_category as determine_taf_category
-        return determine_taf_category(forecast_period)
-            
-    def determine_flight_category(self, metar):
-        """Determine flight category based on ceiling and visibility
-        
-        This is now a wrapper for the function in the metar_processor module
-        """
-        # Use the imported function from metar_processor
-        return determine_flight_category(metar)
-    
-    def get_warning_text(self, status_color, raw_text, airport_id=None):
-        """Generate a warning text description for weather conditions
-        
-        This is now a wrapper for the function in the weather_status module
-        
-        Args:
-            status_color (str): The color indicating the airport status
-            raw_text (str): Raw METAR string
-            airport_id (str): Optional airport ID to lookup crosswind data
-            
-        Returns:
-            str: Warning text describing the reason for the status color
-        """
-        wind_data = None
-        config = None
-        
-        # Check if we have airport_id and can look up wind data
-        if airport_id and airport_id in self.airport_data:
-            wind_data = self.airport_data[airport_id].get("wind_data", {})
-            config = self.config
-            
-        return get_warning_text(status_color, raw_text, airport_id, wind_data, config)
-    
-    
-    def determine_status_color(self, raw_metar, flight_category, wind_data=None):
-        """Determine the status color based on METAR data and wind/crosswind conditions
-        
-        This is now a wrapper for the function in the weather_status module
-        
-        Args:
-            raw_metar (str): Raw METAR string
-            flight_category (str): Flight category (VFR, MVFR, IFR, LIFR)
-            wind_data (dict): Optional wind data including crosswind information
-            
-        Returns:
-            str: Color name representing the flight status
-        """
-        # Pass the crosswind_threshold from config if we have wind data
-        if wind_data and wind_data.get("crosswind") is not None:
-            wind_data = dict(wind_data)  # Create a copy to modify
-            wind_data["crosswind_threshold"] = self.config.get("crosswind_threshold", 10)
-            
-        return determine_status_color(raw_metar, flight_category, wind_data)
+
 
 def main():
     # Configure logging with log rotation
@@ -961,11 +311,22 @@ def main():
     logger.info("Update interval: %d seconds", config['update_interval'])
     logger.info("Forecast hours: %s", str(config['forecast_hours']))
     
+    # Initialize light sensor
+    light_sensor = None
+    try:
+        light_sensor = LightSensor()
+        if light_sensor.available:
+            logger.info("Light sensor initialized successfully")
+        else:
+            logger.info("Light sensor not available, using fixed brightness")
+    except Exception as e:
+        logger.warning(f"Failed to initialize light sensor: {e}")
+    
     # Initialize LED controller if possible
     led_controller = None
     if LED_ENABLED:
         logger.info("LED support is enabled, initializing controller")
-        led_controller = LEDController(config)
+        led_controller = LEDController(config, light_sensor)
     else:
         logger.info("LED support is disabled, running in console-only mode")
     
@@ -993,6 +354,23 @@ def main():
         else:
             logger.warning("Failed to start button handler")
     
+    # Set up keyboard handler if button is not available
+    keyboard_handler = None
+    if not button_handler or not button_success:
+        logger.info("Setting up keyboard handler for mode switching")
+        
+        def keyboard_toggle_callback():
+            mode = metar_status.toggle_display_mode()
+            logger.info("Key pressed: Display mode toggled to %s", 
+                       DisplayMode.get_name(mode))
+            # Print LED status summary when switching modes
+            metar_status.print_led_summary()
+        
+        keyboard_handler = KeyboardHandler(keyboard_toggle_callback)
+        keyboard_handler.start()
+        logger.info("Keyboard handler started successfully")
+        print("Press 'm' key to toggle between display modes.")
+    
     try:
         # Initial data fetch
         if metar_status.fetch_metar_data():
@@ -1004,10 +382,17 @@ def main():
         while True:
             # Wait for the configured update interval
             print(f"\nNext update in {config['update_interval'] // 60} minutes. Press Ctrl+C to exit.")
-            print(f"Current display mode: {DisplayMode.get_name(metar_status.display_mode)}")
+            if metar_status.mode_manager.display_mode == DisplayMode.METAR:
+                print(f"Current display mode: {DisplayMode.get_name(metar_status.mode_manager.display_mode)}")
+            elif metar_status.mode_manager.display_mode == DisplayMode.TAF:
+                print(f"Current display mode: {DisplayMode.get_name(metar_status.mode_manager.display_mode, metar_status.mode_manager.current_forecast_hour)}")
+            else:
+                print(f"Current display mode: {DisplayMode.get_name(metar_status.mode_manager.display_mode)}")
             
-            if button_handler:
-                print("Press button to toggle between METAR and TAF display modes.")
+            if button_handler and button_success:
+                print("Press button to toggle between METAR, TAF, Airports Visited, and Test display modes.")
+            elif keyboard_handler:
+                print("Press 'm' key to toggle between METAR, TAF, Airports Visited, and Test display modes.")
                 
             time.sleep(config['update_interval'])
             
@@ -1026,9 +411,17 @@ def main():
             button_handler.stop()
             logger.info("Button handler stopped")
             
+        if keyboard_handler:
+            keyboard_handler.stop()
+            logger.info("Keyboard handler stopped")
+            
         if led_controller:
             led_controller.clear()
             logger.info("LED controller cleared")
+            
+        if light_sensor:
+            light_sensor.close()
+            logger.info("Light sensor closed")
             
         logger.info("METAR Monitor shut down cleanly")
 

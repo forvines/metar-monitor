@@ -11,3 +11,4 @@ pytest-mock>=3.6.0
 # Uncomment these lines when installing on a Raspberry Pi
 rpi_ws281x>=4.3.0  # For LED control
 RPi.GPIO>=0.7.0    # For button input
+smbus2>=0.4.0      # For I2C light sensor

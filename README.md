@@ -53,6 +53,11 @@ The installation script will:
 
 Edit the `metar_config.json` file with your airport settings:
 
+**Light Sensor Configuration:**
+- `light_sensor_update_interval`: How often to check light level (seconds)
+- `min_brightness`: Minimum LED brightness percentage (1-100)
+- `max_brightness`: Maximum LED brightness percentage (1-100)
+
 ```json
 {
   "crosswind_threshold": 10,
@@ -174,6 +179,39 @@ sudo pip3 install rpi_ws281x RPi.GPIO
    - First press changes from METAR to TAF mode showing the first forecast period (4 hours)
    - Additional presses cycle through available forecast periods (8h, 12h, 18h, 24h)
    - After cycling through all forecast periods, returns to METAR mode
+
+## Keyboard Mode Switching
+
+If no button is configured or available, you can use keyboard input to switch display modes:
+
+- Press 'm' key to toggle between METAR, TAF, Airports Visited, and Test display modes
+- Each mode switch displays an LED status summary showing:
+  - LED index and color indicator (■)
+  - Airport ICAO code and current status
+  - Airport name
+  - All configured airports are shown, including those with LEDs off
+
+### Display Modes
+
+- **METAR Mode**: Shows current weather conditions
+- **TAF Mode**: Shows forecast data for configured time periods (4h, 8h, 12h, 18h, 24h)
+- **Airports Visited Mode**: Shows green for visited airports, red for unvisited (based on `visited_airports` config)
+- **Test Mode**: Shows green for airports with valid METAR data, red for those without
+
+## LED Status Display
+
+The application provides a comprehensive LED status summary that shows:
+
+- **LED Index**: The physical LED position on the strip
+- **Color Indicator**: Visual representation (■) with the actual LED color
+- **Airport Code**: ICAO identifier (e.g., KSEA, KBFI)
+- **Status**: Current flight category or mode-specific status
+- **Airport Name**: Full airport name for reference
+
+The LED summary is displayed:
+- After each data update
+- When switching display modes via keyboard ('m' key)
+- Shows all configured airports, even those with LEDs currently off
 
 ## Troubleshooting
 

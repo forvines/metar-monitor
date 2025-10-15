@@ -7,6 +7,11 @@ Contains all constant values and configuration defaults used throughout the appl
 # Default GPIO pin for mode toggle button
 DEFAULT_BUTTON_PIN = 17
 
+# Light sensor configuration
+DEFAULT_LIGHT_SENSOR_UPDATE_INTERVAL = 30  # seconds
+DEFAULT_MIN_BRIGHTNESS = 10  # minimum LED brightness percentage
+DEFAULT_MAX_BRIGHTNESS = 100  # maximum LED brightness percentage
+
 # Flight categories and their descriptions
 FLIGHT_CATEGORIES = {
     "VFR": "Visual Flight Rules",
@@ -61,3 +66,47 @@ CATEGORY_COLOR_MAP = {
 
 # Configuration file path
 CONFIG_FILE = "metar_config.json"
+
+# Display formatting constants
+DISPLAY_FORMATTING = {
+    "SEPARATOR_LINE": "-" * 60,
+    "HEADER_LINE": "=" * 60,
+    "LED_INDICATOR": "■",
+    "FORECAST_INDENT": "    ",
+    "AIRPORT_INDENT": "  "
+}
+
+# Mode indicator colors
+MODE_INDICATOR_COLOR = "WHITE"
+
+# Display mode names
+MODE_NAMES = {
+    "METAR": "METAR Mode",
+    "TAF": "TAF {hour}h Mode",
+    "AIRPORTS_VISITED": "Airports Visited Mode",
+    "TEST": "Test Mode"
+}
+
+# Display modes
+class DisplayMode:
+    """Display modes for the application"""
+    METAR = 0     # Show current conditions (default)
+    TAF = 1       # Show forecast data
+    AIRPORTS_VISITED = 2  # Show visited airports
+    TEST = 3      # Test mode - show METAR data availability
+    
+    @staticmethod
+    def get_name(mode, forecast_hour=None):
+        """Get the name of a display mode"""
+        if mode == DisplayMode.METAR:
+            return "METAR (Current Conditions)"
+        elif mode == DisplayMode.TAF:
+            if forecast_hour:
+                return f"TAF {forecast_hour}-Hour Forecast"
+            else:
+                return "TAF Forecast"
+        elif mode == DisplayMode.AIRPORTS_VISITED:
+            return "Airports Visited"
+        elif mode == DisplayMode.TEST:
+            return "Test Mode (METAR Data Availability)"
+        return "Unknown"

@@ -54,15 +54,19 @@ class TestStatusColorDetermination(unittest.TestCase):
             ],
             "led_count": 10,
             "metar_url": "https://aviationweather.gov/api/data/metar",
-            "taf_url": "https://aviationweather.gov/api/data/taf"
+            "taf_url": "https://aviationweather.gov/api/data/taf",
+            "light_sensor_update_interval": 30,
+            "min_brightness": 10,
+            "max_brightness": 100
         }
         
         # Mock the logger and API client
         with patch('logging.getLogger') as mock_logger:
             with patch('metar_monitor.METARAPIClient') as mock_api_client:
-                self.metar_status = METARStatus(mock_config)
-                # Replace the real API client with a mock
-                self.metar_status.api_client = mock_api_client.return_value
+                with patch('metar_monitor.LightSensor') as mock_light_sensor:
+                    self.metar_status = METARStatus(mock_config)
+                    # Replace the real API client with a mock
+                    self.metar_status.api_client = mock_api_client.return_value
     
     def test_determine_status_color_flight_category(self):
         """Test status color based on flight category"""
@@ -105,6 +109,58 @@ class TestHelperMethods(unittest.TestCase):
                 self.metar_status = METARStatus(mock_config)
                 # Replace the real API client with a mock
                 self.metar_status.api_client = mock_api_client.return_value
+
+
+class TestLEDSummary(unittest.TestCase):
+    """Tests for LED summary display functionality"""
+    
+    def setUp(self):
+        """Set up test environment"""
+        mock_config = {
+            "airports": [
+                {"icao": "KSEA", "name": "Seattle-Tacoma Intl", "led": 0},
+                {"icao": "KBFI", "name": "Boeing Field", "led": 1},
+                {"icao": "KPAE", "name": "Paine Field", "led": 2}
+            ],
+            "led_count": 10,
+            "forecast_hours": [4, 8, 12],
+            "visited_airports": ["KSEA"],
+            "metar_url": "https://aviationweather.gov/api/data/metar",
+            "taf_url": "https://aviationweather.gov/api/data/taf"
+        }
+        
+        with patch('logging.getLogger') as mock_logger:
+            with patch('metar_monitor.METARAPIClient') as mock_api_client:
+                self.metar_status = METARStatus(mock_config)
+                self.metar_status.api_client = mock_api_client.return_value
+                
+        # Set up test data - only KSEA has data, others don't
+        self.metar_status.airport_data = {
+            "KSEA": {
+                "raw_metar": "KSEA 010000Z 26005KT 10SM FEW100",
+                "flight_category": "VFR",
+                "status_color": "GREEN",
+                "name": "Seattle-Tacoma Intl",
+                "forecasts": {
+                    4: {"color": "BLUE", "category": "MVFR"},
+                    8: {"color": "RED", "category": "IFR"}
+                }
+            }
+        }
+    
+    @patch('builtins.print')
+    def test_print_led_summary_airports_visited_mode(self, mock_print):
+        """Test LED summary in Airports Visited mode"""
+        self.metar_status.display_mode = metar_monitor.DisplayMode.AIRPORTS_VISITED
+        self.metar_status.print_led_summary()
+        
+        print_calls = [call[0][0] for call in mock_print.call_args_list if call[0]]
+        led_lines = [line for line in print_calls if line.startswith("LED")]
+        
+        # KSEA should show as "Visited", others as "Not Visited"
+        self.assertTrue(any("KSEA" in line and "Visited" in line for line in led_lines))
+        self.assertTrue(any("KBFI" in line and "Not Visited" in line for line in led_lines))
+        self.assertTrue(any("KPAE" in line and "Not Visited" in line for line in led_lines))
 
 
 class TestTAFProcessing(unittest.TestCase):
