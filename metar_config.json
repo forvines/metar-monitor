@@ -119,6 +119,6 @@
     "led_channel": 0,
     "button_pin": 17,
     "light_sensor_update_interval": 5,
-    "min_brightness": 10,
+    "min_brightness": 50,
     "max_brightness": 100
 }
