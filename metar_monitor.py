@@ -152,6 +152,7 @@ class LEDController:
             self.strip.setBrightness(new_brightness)
             self.strip.show()
             logging.info(f"LED brightness adjusted to {new_brightness}%")
+            print(f"Light sensor: LED brightness adjusted to {new_brightness}%")
             
         self.last_brightness_update = current_time
     
