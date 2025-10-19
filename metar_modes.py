@@ -81,14 +81,12 @@ class ModeManager:
         
         # Update airport LEDs if we have data
         if airport_data:
-            visited_airports = self.config.get("visited_airports", [])
-            
             for airport, data in airport_data.items():
                 if airport not in self.airport_to_led:
                     continue
                     
                 led_index = self.airport_to_led[airport]
-                status_color = self._get_led_color_for_mode(airport, data, visited_airports)
+                status_color = self._get_led_color_for_mode(airport, data)
                 self.led_controller.set_led(led_index, status_color)
         
         # Update the legend LEDs
@@ -98,7 +96,7 @@ class ModeManager:
         # Update mode LEDs
         self._update_mode_leds()
     
-    def _get_led_color_for_mode(self, airport, data, visited_airports):
+    def _get_led_color_for_mode(self, airport, data):
         """Get LED color based on current display mode"""
         if self.display_mode == DisplayMode.METAR:
             return data.get("status_color", "OFF")
@@ -114,7 +112,11 @@ class ModeManager:
                     return data["forecasts"][closest_hour]["color"]
             return "OFF"
         elif self.display_mode == DisplayMode.AIRPORTS_VISITED:
-            return "GREEN" if airport in visited_airports else "RED"
+            # Find airport config to check visited flag
+            for airport_config in self.config["airports"]:
+                if airport_config["icao"] == airport:
+                    return "GREEN" if airport_config.get("visited", False) else "RED"
+            return "RED"
         else:  # DisplayMode.TEST
             return "GREEN" if data.get("raw_metar") else "RED"
     

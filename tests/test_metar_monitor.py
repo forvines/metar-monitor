@@ -118,13 +118,13 @@ class TestLEDSummary(unittest.TestCase):
         """Set up test environment"""
         mock_config = {
             "airports": [
-                {"icao": "KSEA", "name": "Seattle-Tacoma Intl", "led": 0},
-                {"icao": "KBFI", "name": "Boeing Field", "led": 1},
-                {"icao": "KPAE", "name": "Paine Field", "led": 2}
+                {"icao": "KSEA", "name": "Seattle-Tacoma Intl", "led": 0, "visited": True},
+                {"icao": "KBFI", "name": "Boeing Field", "led": 1, "visited": False},
+                {"icao": "KPAE", "name": "Paine Field", "led": 2, "visited": False}
             ],
             "led_count": 10,
             "forecast_hours": [4, 8, 12],
-            "visited_airports": ["KSEA"],
+
             "metar_url": "https://aviationweather.gov/api/data/metar",
             "taf_url": "https://aviationweather.gov/api/data/taf"
         }

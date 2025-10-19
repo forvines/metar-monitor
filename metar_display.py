@@ -100,12 +100,18 @@ class DisplayManager:
         print(DISPLAY_FORMATTING["SEPARATOR_LINE"])
         
         sorted_airports = self._get_sorted_airports()
-        visited_airports = self.config.get("visited_airports", [])
         
         for led_index, icao, name in sorted_airports:
             airport_info = airport_data.get(icao)
+            # Find airport config for this ICAO
+            airport_config = None
+            for config in self.config["airports"]:
+                if config["icao"] == icao:
+                    airport_config = config
+                    break
+            
             status_color, flight_category = LEDStatusCalculator.get_status_for_airport(
-                icao, airport_info, display_mode, current_forecast_hour, visited_airports
+                icao, airport_info, display_mode, current_forecast_hour, airport_config
             )
             
             # Get warning text if applicable

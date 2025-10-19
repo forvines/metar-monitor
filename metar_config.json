@@ -1,914 +1,124 @@
 {
     "crosswind_threshold": 30,
     "legend": [
-        {
-            "name": "VFR - Visual Flight Rules",
-            "color": "GREEN",
-            "led": 0
-        },
-        {
-            "name": "MVFR - Marginal Visual Flight Rules",
-            "color": "BLUE",
-            "led": 1
-        },
-        {
-            "name": "IFR - Instrument Flight Rules",
-            "color": "RED",
-            "led": 2
-        },
-        {
-            "name": "LIFR - Low Instrument Flight Rules",
-            "color": "PURPLE",
-            "led": 3
-        },
-        {
-            "name": "Weather Warning (Wind/Storm/Crosswind)",
-            "color": "YELLOW",
-            "led": 4
-        }
+        {"name": "VFR - Visual Flight Rules", "color": "GREEN", "led": 0},
+        {"name": "MVFR - Marginal Visual Flight Rules", "color": "BLUE", "led": 1},
+        {"name": "IFR - Instrument Flight Rules", "color": "RED", "led": 2},
+        {"name": "LIFR - Low Instrument Flight Rules", "color": "PURPLE", "led": 3},
+        {"name": "Weather Warning (Wind/Storm/Crosswind)", "color": "YELLOW", "led": 4}
     ],
     "mode_leds": {
         "metar": 5,
-        "taf": {
-            "4": 6,
-            "8": 7,
-            "16": 8,
-            "24": 9
-        },
+        "taf": {"4": 6, "8": 7, "16": 8, "24": 9},
         "airports_visited": 10,
         "test": 11
     },
-    "visited_airports": [
-        "KSEA",
-        "KBFI",
-        "KPAE",
-        "KPDX"
-    ],
     "airports": [
-        {
-            "icao": "KUIL",
-            "name": "Quillayute Airport (WA Coast)",
-            "runways": [
-                {
-                    "name": "04/22",
-                    "direction": 40
-                }
-            ],
-            "led": 12
-        },
-        {
-            "icao": "KHQM",
-            "name": "Bowerman Airport (Washington Coast)",
-            "led": 13,
-            "runways": [
-                {
-                    "name": "06/24",
-                    "direction": 60
-                }
-            ]
-        },
-        {
-            "icao": "KAST",
-            "name": "Astoria Regional Airport (Washington Coast)",
-            "led": 14,
-            "runways": [
-                {
-                    "name": "08/26",
-                    "direction": 80
-                }
-            ]
-        },
-        {
-            "icao": "KTMK",
-            "name": "Tillamook Airport (OR)",
-            "runways": [
-                {
-                    "name": "13/31",
-                    "direction": 130
-                },
-                {
-                    "name": "01/19",
-                    "direction": 10
-                }
-            ],
-            "led": 15
-        },
-        {
-            "icao": "KONP",
-            "name": "Newport Municipal Airport (Oregon Coast)",
-            "led": 16,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KORS",
-            "name": "Orcas Island Airport (San Juan Islands)",
-            "led": 17,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 163
-                }
-            ]
-        },
-        {
-            "icao": "KFHR",
-            "name": "Friday Harbor Airport (San Juan Islands)",
-            "led": 18,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KNUW",
-            "name": "NAS Whidbey Island (Northwest WA)",
-            "led": 19,
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                },
-                {
-                    "name": "14/32",
-                    "direction": 140
-                }
-            ]
-        },
-        {
-            "icao": "KCLM",
-            "name": "William R. Fairchild International Airport (Olympic Peninsula)",
-            "led": 20,
-            "runways": [
-                {
-                    "name": "08/26",
-                    "direction": 80
-                }
-            ]
-        },
-        {
-            "icao": "0S9",
-            "name": "Jefferson County Intl (Port Townsend, WA)",
-            "runways": [
-                {
-                    "name": "09/27",
-                    "direction": 90
-                }
-            ],
-            "led": 21
-        },
-        {
-            "icao": "KBVS",
-            "name": "Skagit Regional Airport (Northwest WA)",
-            "led": 22,
-            "runways": [
-                {
-                    "name": "10/28",
-                    "direction": 100
-                },
-                {
-                    "name": "04/22",
-                    "direction": 40
-                }
-            ]
-        },
-        {
-            "icao": "KAWO",
-            "name": "Arlington Municipal Airport (Northwest WA)",
-            "led": 23,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "S5L",
-            "name": "Stanwood Bryant Field (Northwest WA)",
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ],
-            "led": 24
-        },
-        {
-            "icao": "KPAE",
-            "name": "Snohomish County Airport (Paine Field) (Northwest WA)",
-            "led": 25,
-            "runways": [
-                {
-                    "name": "16R/34L",
-                    "direction": 160
-                },
-                {
-                    "name": "16L/34R",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KBFI",
-            "name": "Boeing Field/King County International Airport (Seattle Metro)",
-            "led": 26,
-            "runways": [
-                {
-                    "name": "14R/32L",
-                    "direction": 140
-                },
-                {
-                    "name": "14L/32R",
-                    "direction": 140
-                }
-            ]
-        },
-        {
-            "icao": "KPWT",
-            "name": "Bremerton National Airport (Seattle Metro)",
-            "led": 27,
-            "runways": [
-                {
-                    "name": "02/20",
-                    "direction": 20
-                }
-            ]
-        },
-        {
-            "icao": "KRNT",
-            "name": "Renton Municipal Airport (Seattle Metro)",
-            "led": 28,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KSEA",
-            "name": "Seattle-Tacoma International Airport (Seattle Metro)",
-            "led": 29,
-            "runways": [
-                {
-                    "name": "16L/34R",
-                    "direction": 160
-                },
-                {
-                    "name": "16C/34C",
-                    "direction": 160
-                },
-                {
-                    "name": "16R/34L",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KTIW",
-            "name": "Tacoma Narrows Airport (South Puget Sound)",
-            "led": 30,
-            "runways": [
-                {
-                    "name": "17/35",
-                    "direction": 170
-                }
-            ]
-        },
-        {
-            "icao": "KTCM",
-            "name": "McChord Field (South Puget Sound)",
-            "led": 31,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KPLU",
-            "name": "Pierce County Airport - Thun Field (South Puget Sound)",
-            "led": 32,
-            "runways": [
-                {
-                    "name": "17/35",
-                    "direction": 170
-                },
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KGRF",
-            "name": "Gray Army Airfield (South Puget Sound)",
-            "led": 33,
-            "runways": [
-                {
-                    "name": "15/33",
-                    "direction": 150
-                }
-            ]
-        },
-        {
-            "icao": "KOLM",
-            "name": "Olympia Regional Airport (South Puget Sound)",
-            "led": 34,
-            "runways": [
-                {
-                    "name": "17/35",
-                    "direction": 170
-                }
-            ]
-        },
-        {
-            "icao": "KSHN",
-            "name": "Sanderson Field (South Puget Sound)",
-            "led": 35,
-            "runways": [
-                {
-                    "name": "05/23",
-                    "direction": 50
-                }
-            ]
-        },
-        {
-            "icao": "KCLS",
-            "name": "Chehalis-Centralia Airport (Southwest WA)",
-            "led": 36,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KUAO",
-            "name": "Aurora State Airport (Willamette Valley)",
-            "led": 37,
-            "runways": [
-                {
-                    "name": "17/35",
-                    "direction": 170
-                }
-            ]
-        },
-        {
-            "icao": "KSLE",
-            "name": "Salem Municipal Airport (Willamette Valley)",
-            "led": 38,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                },
-                {
-                    "name": "13/31",
-                    "direction": 130
-                }
-            ]
-        },
-        {
-            "icao": "KSPB",
-            "name": "Scappoose Industrial Airpark (Portland Metro)",
-            "led": 39,
-            "runways": [
-                {
-                    "name": "15/33",
-                    "direction": 150
-                }
-            ]
-        },
-        {
-            "icao": "KVUO",
-            "name": "Pearson Field (Portland Metro)",
-            "led": 40,
-            "runways": [
-                {
-                    "name": "08/26",
-                    "direction": 80
-                }
-            ]
-        },
-        {
-            "icao": "KPDX",
-            "name": "Portland International Airport (Portland Metro)",
-            "led": 41,
-            "runways": [
-                {
-                    "name": "10L/28R",
-                    "direction": 100
-                },
-                {
-                    "name": "10R/28L",
-                    "direction": 100
-                }
-            ]
-        },
-        {
-            "icao": "KTTD",
-            "name": "Portland-Troutdale Airport (Portland Metro)",
-            "led": 42,
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                }
-            ]
-        },
-        {
-            "icao": "KHIO",
-            "name": "Portland-Hillsboro Airport (Portland Metro)",
-            "led": 43,
-            "runways": [
-                {
-                    "name": "13/31",
-                    "direction": 130
-                },
-                {
-                    "name": "02/20",
-                    "direction": 20
-                }
-            ]
-        },
-        {
-            "icao": "KDLS",
-            "name": "Columbia Gorge Regional Airport (Central Oregon)",
-            "led": 44,
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                },
-                {
-                    "name": "12/30",
-                    "direction": 120
-                }
-            ]
-        },
-        {
-            "icao": "KRDM",
-            "name": "Roberts Field (Central Oregon)",
-            "led": 45,
-            "runways": [
-                {
-                    "name": "04/22",
-                    "direction": 40
-                },
-                {
-                    "name": "10/28",
-                    "direction": 100
-                }
-            ]
-        },
-        {
-            "icao": "KBLI",
-            "name": "Bellingham International Airport (Northernmost WA)",
-            "led": 46,
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ]
-        },
-        {
-            "icao": "KOMK",
-            "name": "Omak Airport (North-Central WA)",
-            "led": 47,
-            "runways": [
-                {
-                    "name": "17/35",
-                    "direction": 170
-                }
-            ]
-        },
-        {
-            "icao": "KSZT",
-            "name": "Sandpoint Airport (North-Central WA)",
-            "led": 48,
-            "runways": [
-                {
-                    "name": "15/33",
-                    "direction": 150
-                }
-            ]
-        },
-        {
-            "icao": "S43",
-            "name": "Harvey Field (Snohomish, WA)",
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ],
-            "led": 49
-        },
-        {
-            "icao": "KEAT",
-            "name": "Pangborn Memorial Airport (North-Central WA)",
-            "led": 50,
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                },
-                {
-                    "name": "11/29",
-                    "direction": 110
-                }
-            ]
-        },
-        {
-            "icao": "KEPH",
-            "name": "Ephrata Municipal Airport (Central Washington)",
-            "led": 51,
-            "runways": [
-                {
-                    "name": "11/29",
-                    "direction": 110
-                }
-            ]
-        },
-        {
-            "icao": "KSMP",
-            "name": "Stampede Airport (North-Central WA)",
-            "led": 52,
-            "runways": [
-                {
-                    "name": "09/27",
-                    "direction": 90
-                }
-            ]
-        },
-        {
-            "icao": "KMWH",
-            "name": "Grant County International Airport (Central Washington)",
-            "led": 53,
-            "runways": [
-                {
-                    "name": "04/22",
-                    "direction": 40
-                },
-                {
-                    "name": "14/32",
-                    "direction": 140
-                }
-            ]
-        },
-        {
-            "icao": "KELN",
-            "name": "Bowers Field (Central Washington)",
-            "led": 54,
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                },
-                {
-                    "name": "11/29",
-                    "direction": 110
-                }
-            ]
-        },
-        {
-            "icao": "KYKM",
-            "name": "Yakima Air Terminal (Central Washington)",
-            "led": 55,
-            "runways": [
-                {
-                    "name": "09/27",
-                    "direction": 90
-                },
-                {
-                    "name": "04/22",
-                    "direction": 40
-                }
-            ]
-        },
-        {
-            "icao": "1S5",
-            "name": "Sunnyside Municipal Airport (Central WA)",
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                }
-            ],
-            "led": 56
-        },
-        {
-            "icao": "9S9",
-            "name": "Lexington Airport (Lower Columbia, WA)",
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ],
-            "led": 57
-        },
-        {
-            "icao": "KPDT",
-            "name": "Eastern Oregon Regional Airport (Northeast OR)",
-            "led": 58,
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                },
-                {
-                    "name": "11/29",
-                    "direction": 110
-                }
-            ]
-        },
-        {
-            "icao": "KMMV",
-            "name": "McMinnville Municipal Airport (OR)",
-            "runways": [
-                {
-                    "name": "04/22",
-                    "direction": 40
-                },
-                {
-                    "name": "17/35",
-                    "direction": 170
-                }
-            ],
-            "led": 59
-        },
-        {
-            "icao": "KS33",
-            "name": "Madras Municipal Airport (OR)",
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                },
-                {
-                    "name": "04/22",
-                    "direction": 40
-                }
-            ],
-            "led": 60
-        },
-        {
-            "icao": "KCVO",
-            "name": "Corvallis Municipal Airport (OR)",
-            "runways": [
-                {
-                    "name": "17/35",
-                    "direction": 170
-                },
-                {
-                    "name": "10/28",
-                    "direction": 100
-                }
-            ],
-            "led": 61
-        },
-        {
-            "icao": "KDEW",
-            "name": "Deer Park Airport (Eastern WA)",
-            "led": 62,
-            "runways": [
-                {
-                    "name": "04/22",
-                    "direction": 40
-                }
-            ]
-        },
-        {
-            "icao": "63S",
-            "name": "Colville Municipal Airport (Northeast WA)",
-            "runways": [
-                {
-                    "name": "07/25",
-                    "direction": 70
-                }
-            ],
-            "led": 63
-        },
-        {
-            "icao": "KCOE",
-            "name": "Coeur d'Alene Airport (Eastern WA/North Idaho)",
-            "led": 64,
-            "runways": [
-                {
-                    "name": "06/24",
-                    "direction": 60
-                },
-                {
-                    "name": "01/19",
-                    "direction": 10
-                }
-            ]
-        },
-        {
-            "icao": "KSFF",
-            "name": "Felts Field (Eastern WA)",
-            "led": 65,
-            "runways": [
-                {
-                    "name": "04L/22R",
-                    "direction": 40
-                },
-                {
-                    "name": "04R/22L",
-                    "direction": 40
-                }
-            ]
-        },
-        {
-            "icao": "KSKA",
-            "name": "Fairchild Air Force Base (Eastern WA)",
-            "led": 66,
-            "runways": [
-                {
-                    "name": "05/23",
-                    "direction": 50
-                }
-            ]
-        },
-        {
-            "icao": "KGEG",
-            "name": "Spokane International Airport (Eastern WA)",
-            "led": 67,
-            "runways": [
-                {
-                    "name": "03/21",
-                    "direction": 30
-                },
-                {
-                    "name": "07/25",
-                    "direction": 70
-                }
-            ]
-        },
-        {
-            "icao": "KPUW",
-            "name": "Pullman-Moscow Regional Airport (Southeast WA)",
-            "led": 68,
-            "runways": [
-                {
-                    "name": "05/23",
-                    "direction": 50
-                }
-            ]
-        },
-        {
-            "icao": "KLWS",
-            "name": "Lewiston-Nez Perce County Airport (Southeast WA/North ID)",
-            "led": 69,
-            "runways": [
-                {
-                    "name": "08/26",
-                    "direction": 80
-                },
-                {
-                    "name": "12/30",
-                    "direction": 120
-                }
-            ]
-        },
-        {
-            "icao": "KPSC",
-            "name": "Tri-Cities Airport (Southeast WA)",
-            "led": 70,
-            "runways": [
-                {
-                    "name": "03/21",
-                    "direction": 30
-                },
-                {
-                    "name": "12R/30L",
-                    "direction": 120
-                }
-            ]
-        },
-        {
-            "icao": "KRLD",
-            "name": "Richland Airport (Tri-Cities, WA)",
-            "runways": [
-                {
-                    "name": "08/26",
-                    "direction": 80
-                }
-            ],
-            "led": 71
-        },
-        {
-            "icao": "42S",
-            "name": "Prosser Airport (South-Central WA)",
-            "runways": [
-                {
-                    "name": "11/29",
-                    "direction": 110
-                }
-            ],
-            "led": 72
-        },
-        {
-            "icao": "KALW",
-            "name": "Walla Walla Regional Airport (Southeast WA)",
-            "led": 73,
-            "runways": [
-                {
-                    "name": "02/20",
-                    "direction": 20
-                },
-                {
-                    "name": "07/25",
-                    "direction": 70
-                }
-            ]
-        },
-        {
-            "icao": "KHRI",
-            "name": "Hermiston Municipal Airport (NE Oregon)",
-            "runways": [
-                {
-                    "name": "05/23",
-                    "direction": 50
-                }
-            ],
-            "led": 74
-        },
-        {
-            "icao": "KJSY",
-            "name": "Joseph State Airport (NE Oregon)",
-            "runways": [
-                {
-                    "name": "15/33",
-                    "direction": 150
-                }
-            ],
-            "led": 75
-        },
-        {
-            "icao": "KLGD",
-            "name": "La Grande/Union County Airport (NE Oregon)",
-            "runways": [
-                {
-                    "name": "16/34",
-                    "direction": 160
-                }
-            ],
-            "led": 76
-        },
-        {
-            "icao": "KBKE",
-            "name": "Baker City Municipal Airport (NE Oregon)",
-            "runways": [
-                {
-                    "name": "13/31",
-                    "direction": 130
-                }
-            ],
-            "led": 77
-        },
-        {
-            "icao": "KMUO",
-            "name": "Mountain Home Air Force Base (Southern ID)",
-            "led": 78,
-            "runways": [
-                {
-                    "name": "12/30",
-                    "direction": 120
-                }
-            ]
-        }
-    ],
+        {"icao":"KONP","name":"Newport Municipal Airport","led":12,"visited":false,"runways":[{"name":"02/20","direction":20},{"name":"16/34","direction":160}]},
+        {"icao":"KCVO","name":"Corvallis Municipal Airport","led":13,"visited":false,"runways":[{"name":"17/35","direction":170},{"name":"10/28","direction":100}]},
+        {"icao":"S12","name":"Albany Municipal Airport","led":14,"visited":false,"runways":[{"name":"16/34","direction":170}]},
+        {"icao":"KSLE","name":"McNary Field (Salem–Willamette Valley Airport)","led":15,"visited":false,"runways":[{"name":"13/31","direction":130},{"name":"16/34","direction":160}]},
+        {"icao":"KMMV","name":"McMinnville Municipal Airport","led":16,"visited":false,"runways":[{"name":"04/22","direction":40},{"name":"17/35","direction":170}]},
+        {"icao":"KPFC","name":"Pacific City State Airport","led":17,"visited":false,"runways":[{"name":"14/32","direction":140}]},
+        {"icao":"KTMK","name":"Tillamook Airport","led":18,"visited":true,"runways":[{"name":"13/31","direction":130}]},
+        {"icao":"KUAO","name":"Aurora State Airport","led":19,"visited":false,"runways":[{"name":"17/35","direction":170}]},
+        {"icao":"KHIO","name":"Portland–Hillsboro Airport","led":20,"visited":false,"runways":[{"name":"13R/31L","direction":130},{"name":"13L/31R","direction":130},{"name":"02/20","direction":20}]},
+        {"icao":"KVUO","name":"Pearson Field","led":21,"visited":true,"runways":[{"name":"08/26","direction":80}]},
+        {"icao":"KPDX","name":"Portland International Airport","led":22,"visited":true,"runways":[{"name":"10L/28R","direction":100},{"name":"10R/28L","direction":100},{"name":"03/21","direction":30}]},
+        {"icao":"KTTD","name":"Portland–Troutdale Airport","led":23,"visited":false,"runways":[{"name":"07/25","direction":70}]},
+        {"icao":"KCZK","name":"Cascade Locks State Airport","led":24,"visited":false,"runways":[{"name":"06/24","direction":60}]},
+        {"icao":"4S2","name":"Ken Jernstedt Airfield (Hood River)","led":25,"visited":false,"runways":[{"name":"07/25","direction":70}]},
+        {"icao":"KSPB","name":"Scappoose Industrial Airpark","led":26,"visited":false,"runways":[{"name":"15/33","direction":150}]},
+        {"icao":"56S","name":"Seaside Municipal Airport","led":27,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KAST","name":"Astoria Regional Airport","led":28,"visited":true,"runways":[{"name":"08/26","direction":80},{"name":"14/32","direction":140}]},
+        {"icao":"KKLS","name":"Southwest Washington Regional Airport (Kelso–Longview)","led":29,"visited":true,"runways":[{"name":"12/30","direction":120}]},
+        {"icao":"KTDO","name":"Toledo–Winlock (South Lewis County) Airport","led":30,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KCLS","name":"Chehalis-Centralia Airport","led":31,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"14S","name":"Westport Airport","led":32,"visited":true,"runways":[{"name":"12/30","direction":120}]},
+        {"icao":"KHQM","name":"Hoquiam Bowerman Field","led":33,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"W04","name":"Ocean Shores Municipal Airport","led":34,"visited":true,"runways":[{"name":"15/33","direction":150}]},
+        {"icao":"KSHN","name":"Sanderson Field","led":35,"visited":true,"runways":[{"name":"05/23","direction":50}]},
+        {"icao":"KOLM","name":"Olympia Regional Airport","led":36,"visited":true,"runways":[{"name":"17/35","direction":170}]},
+        {"icao":"KGRF","name":"Gray Army Airfield","led":37,"visited":false,"runways":[{"name":"15/33","direction":150}]},
+        {"icao":"KTCM","name":"McChord Field","led":38,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KPLU","name":"Pierce County Airport - Thun Field","led":39,"visited":true,"runways":[{"name":"17/35","direction":170}]},
+        {"icao":"KTIW","name":"Tacoma Narrows Airport","led":40,"visited":true,"runways":[{"name":"17/35","direction":170}]},
+        {"icao":"S50","name":"Auburn Municipal Airport","led":41,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KSEA","name":"Seattle-Tacoma International Airport","led":42,"visited":false,"runways":[{"name":"16L/34R","direction":160},{"name":"16C/34C","direction":160},{"name":"16R/34L","direction":160}]},
+        {"icao":"KRNT","name":"Renton Municipal Airport","led":43,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KBFI","name":"Boeing Field","led":44,"visited":true,"runways":[{"name":"14R/32L","direction":140},{"name":"14L/32R","direction":140}]},
+        {"icao":"KPWT","name":"Bremerton National Airport","led":45,"visited":true,"runways":[{"name":"02/20","direction":20}]},
+        {"icao":"S43","name":"Harvey Field","led":46,"visited":true,"runways":[{"name":"15/33","direction":150}]},
+        {"icao":"KPAE","name":"Snohomish County Airport (Paine Field)","led":47,"visited":true,"runways":[{"name":"16R/34L","direction":160},{"name":"16L/34R","direction":160}]},
+        {"icao":"KCLM","name":"William R. Fairchild International Airport","led":48,"visited":true,"runways":[{"name":"09/27","direction":90},{"name":"13/31","direction":130}]},
+        {"icao":"KNOW","name":"Pt Angeles Naval Airstation","led":49,"visited":false,"runways":[{"name":"08/26","direction":80}]},
+        {"icao":"W28","name":"Sequim Valley Airport","led":50,"visited":false,"runways":[{"name":"09/27","direction":90}]},
+        {"icao":"0S9","name":"Jefferson County International","led":51,"visited":true,"runways":[{"name":"09/27","direction":90}]},
+        {"icao":"KNRA","name":"Coupeville","led":52,"visited":false,"runways":[{"name":"14/32","direction":140}]},
+        {"icao":"KNUW","name":"Whidbey NAS","led":53,"visited":false,"runways":[{"name":"14/32","direction":140},{"name":"07/25","direction":70}]},
+        {"icao":"74S","name":"Anacortes Airport","led":54,"visited":true,"runways":[{"name":"18/36","direction":180}]},
+        {"icao":"S31","name":"Lopez Island Airport","led":55,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KFHR","name":"Friday Harbor Airport","led":56,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"WA09","name":"Roche Harbor Airport","led":57,"visited":false,"runways":[{"name":"07/25","direction":70}]},
+        {"icao":"KORS","name":"Orcas Island Airport","led":58,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KBLI","name":"Bellingham International Airport","led":59,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KBVS","name":"Skagit Regional Airport","led":60,"visited":false,"runways":[{"name":"11/29","direction":110},{"name":"04/22","direction":40}]},
+        {"icao":"KAWO","name":"Arlington Municipal Airport (WA)","led":61,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"1S2","name":"Darrington Municipal Airport","led":62,"visited":false,"runways":[{"name":"10/28","direction":100}]},
+        {"icao":"4W0","name":"Bandera State Airport","led":63,"visited":false,"runways":[{"name":"08/26","direction":80}]},
+        {"icao":"21W","name":"Ranger Creek Airport","led":64,"visited":true,"runways":[{"name":"15/33","direction":150}]},
+        {"icao":"KESW","name":"Easton State Airport","led":65,"visited":false,"runways":[{"name":"09/27","direction":90}]},
+        {"icao":"S93","name":"Cle Elum Municipal Airport","led":66,"visited":false,"runways":[{"name":"07/25","direction":70}]},
+        {"icao":"KELN","name":"Bowers Field (Ellensburg)","led":67,"visited":true,"runways":[{"name":"11/29","direction":110}]},
+        {"icao":"KEAT","name":"Pangborn Memorial Airport (Wenatchee)","led":68,"visited":true,"runways":[{"name":"12/30","direction":120}]},
+        {"icao":"S10","name":"Lake Chelan Airport","led":69,"visited":true,"runways":[{"name":"02/20","direction":20}]},
+        {"icao":"2S0","name":"Twisp Municipal Airport","led":70,"visited":false,"runways":[{"name":"10/28","direction":100}]},
+        {"icao":"S52","name":"Methow State Airport","led":71,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KOMK","name":"Omak Airport","led":72,"visited":false,"runways":[{"name":"17/35","direction":170}]},
+        {"icao":"S35","name":"Okanogan Legion Airport","led":73,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"3W7","name":"Grand Coulee Dam Airport","led":74,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"63S","name":"Colville Municipal Airport","led":75,"visited":false,"runways":[{"name":"05/23","direction":50}]},
+        {"icao":"KSZT","name":"Sandpoint Airport","led":76,"visited":false,"runways":[{"name":"02/20","direction":20}]},
+        {"icao":"KCOE","name":"Coeur d'Alene/Pappy Boyington Field","led":77,"visited":false,"runways":[{"name":"05/23","direction":50}]},
+        {"icao":"KDEW","name":"Deer Park Municipal Airport","led":78,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"70S","name":"Mead Flying Service Airport","led":79,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KSFF","name":"Felts Field","led":80,"visited":false,"runways":[{"name":"04L/22R","direction":40},{"name":"04R/22L","direction":40}]},
+        {"icao":"KGEG","name":"Spokane International Airport","led":81,"visited":true,"runways":[{"name":"03/21","direction":30},{"name":"08/26","direction":80},{"name":"17/35","direction":170}]},
+        {"icao":"KSKA","name":"Fairchild Air Force Base","led":82,"visited":false,"runways":[{"name":"05/23","direction":50}]},
+        {"icao":"KEPH","name":"Ephrata Municipal Airport","led":83,"visited":false,"runways":[{"name":"03/21","direction":30},{"name":"12/30","direction":120}]},
+        {"icao":"KMWH","name":"Grant County International (Moses Lake)","led":84,"visited":false,"runways":[{"name":"16/34","direction":160},{"name":"04/22","direction":40},{"name":"09/27","direction":90}]},
+        {"icao":"W20","name":"Moses Lake Municipal Airport","led":85,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"S70","name":"Othello Municipal Airport","led":86,"visited":true,"runways":[{"name":"05/23","direction":50}]},
+        {"icao":"KPUW","name":"Pullman–Moscow Regional Airport","led":87,"visited":false,"runways":[{"name":"05/23","direction":50}]},
+        {"icao":"KLWS","name":"Lewiston–Nez Perce County Airport","led":88,"visited":false,"runways":[{"name":"08/26","direction":80}]},
+        {"icao":"KJSY","name":"Joseph State Airport","led":89,"visited":false,"runways":[{"name":"15/33","direction":150}]},
+        {"icao":"KBKE","name":"Baker City Municipal Airport","led":90,"visited":false,"runways":[{"name":"16/34","direction":160},{"name":"12/30","direction":120}]},
+        {"icao":"KLGD","name":"La Grande Airport","led":91,"visited":true,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KALW","name":"Walla Walla Regional Airport","led":92,"visited":false,"runways":[{"name":"12/30","direction":120}]},
+        {"icao":"KPDT","name":"Eastern Oregon Regional Airport at Pendleton","led":93,"visited":false,"runways":[{"name":"08/26","direction":80},{"name":"11/29","direction":110}]},
+        {"icao":"KPSC","name":"Tri-Cities Airport","led":94,"visited":true,"runways":[{"name":"03/21","direction":30}]},
+        {"icao":"KRLD","name":"Richland Airport","led":95,"visited":true,"runways":[{"name":"01/19","direction":10}]},
+        {"icao":"S40","name":"Prosser Airport","led":96,"visited":false,"runways":[{"name":"11/29","direction":110}]},
+        {"icao":"KYKM","name":"Yakima Air Terminal (McAllister Field)","led":97,"visited":true,"runways":[{"name":"09/27","direction":90}]},
+        {"icao":"9S9","name":"Lexington Airport","led":98,"visited":false,"runways":[{"name":"16/34","direction":160}]},
+        {"icao":"KDLS","name":"Columbia Gorge Regional/The Dalles Municipal","led":99,"visited":false,"runways":[{"name":"13/31","direction":130}]},
+        {"icao":"S33","name":"Madras Municipal Airport","led":100,"visited":false,"runways":[{"name":"16/34","direction":160},{"name":"04/22","direction":40}]},
+        {"icao":"11S","name":"Sekiu Airport","led":101,"visited":false,"runways":[{"name":"08/26","direction":80}]},
+        {"icao":"KUIL","name":"Quillayute Airport","led":102,"visited":false,"runways":[{"name":"12/30","direction":120}]}
+        ],
     "update_interval": 300,
     "metar_url": "https://aviationweather.gov/api/data/metar",
     "taf_url": "https://aviationweather.gov/api/data/taf",
-    "forecast_hours": [
-        4,
-        8,
-        16,
-        24
-    ],
+    "forecast_hours": [4, 8, 16, 24],
     "led_pin": 18,
-    "led_count": 100,
+    "led_count": 103,
     "led_brightness": 80,
     "led_freq_hz": 800000,
     "led_dma": 10,
     "led_invert": false,
     "led_channel": 0,
     "button_pin": 17,
-    "light_sensor_update_interval": 30,
+    "light_sensor_update_interval": 5,
     "min_brightness": 10,
     "max_brightness": 100
 }
