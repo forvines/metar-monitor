@@ -116,7 +116,7 @@ class ModeManager:
                     return "GREEN" if airport_config.get("visited", False) else "RED"
             return "RED"
         else:  # DisplayMode.TEST
-            return "WHITE"  # Always light up in test mode
+            return "GREEN" if data.get("raw_metar") else "RED"
     
     def _set_legend_leds(self):
         """Set the legend LEDs to their corresponding colors"""

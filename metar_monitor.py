@@ -49,7 +49,7 @@ try:
         "PURPLE": Color(0, 128, 128), # LIFR
         "YELLOW": Color(255, 255, 0), # Wind/Storm warnings
         "WHITE": Color(255, 255, 255), # Mode indicator - METAR
-        "GRAY": Color(32, 32, 32),    # Unknown/No METAR
+        "GRAY": Color(8, 8, 8),      # Unknown/No METAR
         "OFF": Color(0, 0, 0)         # Off
     }
     LED_ENABLED = True
