@@ -81,15 +81,11 @@ class ModeManager:
                    "Test"
         self.logger.info("Updating LED display in %s mode", mode_name)
         
-        # Update airport LEDs if we have data
-        if airport_data:
-            for airport, data in airport_data.items():
-                if airport not in self.airport_to_led:
-                    continue
-                    
-                led_index = self.airport_to_led[airport]
-                status_color = self._get_led_color_for_mode(airport, data)
-                self.led_controller.set_led(led_index, status_color)
+        # Update airport LEDs - always update all configured airports
+        for airport_icao, led_index in self.airport_to_led.items():
+            data = airport_data.get(airport_icao, {}) if airport_data else {}
+            status_color = self._get_led_color_for_mode(airport_icao, data)
+            self.led_controller.set_led(led_index, status_color)
         
         # Update the legend LEDs
         if self.legend_leds:
@@ -101,7 +97,7 @@ class ModeManager:
     def _get_led_color_for_mode(self, airport, data):
         """Get LED color based on current display mode"""
         if self.display_mode == DisplayMode.METAR:
-            return data.get("status_color", "OFF")
+            return data.get("status_color", "GRAY")
         elif self.display_mode == DisplayMode.TAF:
             if "forecasts" in data and data["forecasts"]:
                 forecast_hour = self.current_forecast_hour
@@ -112,7 +108,7 @@ class ModeManager:
                     available_hours = sorted(data["forecasts"].keys())
                     closest_hour = min(available_hours, key=lambda x: abs(x - forecast_hour))
                     return data["forecasts"][closest_hour]["color"]
-            return "OFF"
+            return "GRAY"
         elif self.display_mode == DisplayMode.AIRPORTS_VISITED:
             # Find airport config to check visited flag
             for airport_config in self.config["airports"]:
@@ -120,7 +116,7 @@ class ModeManager:
                     return "GREEN" if airport_config.get("visited", False) else "RED"
             return "RED"
         else:  # DisplayMode.TEST
-            return "GREEN" if data.get("raw_metar") else "RED"
+            return "WHITE"  # Always light up in test mode
     
     def _set_legend_leds(self):
         """Set the legend LEDs to their corresponding colors"""
