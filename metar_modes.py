@@ -16,7 +16,9 @@ class ModeManager:
         self.config = config
         self.led_controller = led_controller
         self.display_mode = DisplayMode.METAR
-        self.current_forecast_hour = 6
+        # Initialize forecast hour to first configured hour
+        forecast_hours = config.get("forecast_hours", [4])
+        self.current_forecast_hour = forecast_hours[0] if forecast_hours else 4
         self.forecast_hour_index = 0
         self.logger = logging.getLogger("mode_manager")
         

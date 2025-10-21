@@ -49,7 +49,10 @@ class ButtonHandler:
             # Set up GPIO
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            logger.info(f"Button configured on GPIO pin {self.button_pin}")
+            logger.info(f"Button configured on GPIO pin {self.button_pin} with pull-up resistor")
+            # Test initial GPIO state
+            initial_state = GPIO.input(self.button_pin)
+            logger.info(f"Initial button state: {'HIGH' if initial_state else 'LOW'}")
         except Exception as e:
             logger.error(f"Error setting up GPIO: {str(e)}")
             return
@@ -98,14 +101,22 @@ class ButtonHandler:
         logger.info(f"Button monitoring started on GPIO pin {self.button_pin}")
         
         try:
+            button_state_logged = False
             while self.is_running:
+                current_state = GPIO.input(self.button_pin)
+                
+                # Log initial button state once for debugging
+                if not button_state_logged:
+                    logger.info(f"Button monitoring active, current state: {'HIGH' if current_state else 'LOW'}")
+                    button_state_logged = True
+                
                 # Wait for button press (falling edge)
-                if GPIO.input(self.button_pin) == GPIO.LOW:
+                if current_state == GPIO.LOW:
                     # Check for debounce
                     current_time = time.time()
                     if (current_time - self.last_press_time) >= DEBOUNCE_TIME:
                         self.last_press_time = current_time
-                        logger.info("Button pressed")
+                        logger.info("Button pressed - executing callback")
                         
                         # Execute the callback if it exists
                         if self.callback:
@@ -113,10 +124,15 @@ class ButtonHandler:
                                 self.callback()
                             except Exception as e:
                                 logger.error(f"Error in button callback: {str(e)}")
+                        else:
+                            logger.warning("Button pressed but no callback configured")
+                    else:
+                        logger.debug(f"Button press ignored due to debounce (time since last: {current_time - self.last_press_time:.2f}s)")
                     
                     # Wait for button release
                     while GPIO.input(self.button_pin) == GPIO.LOW and self.is_running:
                         time.sleep(0.05)
+                    logger.debug("Button released")
                         
                 # Small delay to prevent CPU hogging
                 time.sleep(0.05)

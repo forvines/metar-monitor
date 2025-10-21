@@ -345,6 +345,8 @@ def main():
             mode = metar_status.toggle_display_mode()
             logger.info("Button pressed: Display mode toggled to %s", 
                        DisplayMode.get_name(mode))
+            # Print LED status summary when switching modes
+            metar_status.print_led_summary()
         
         button_handler = ButtonHandler(button_pin, toggle_mode_callback)
         button_success = button_handler.start()
