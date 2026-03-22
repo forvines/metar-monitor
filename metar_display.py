@@ -63,15 +63,18 @@ class DisplayManager:
         raw_text = airport_data["raw_metar"]
         status_color = airport_data["status_color"]
         flight_category = airport_data["flight_category"]
+        is_estimated = airport_data.get("estimated", False)
         
         # Format the display
         color_code = COLORS.get(status_color, COLORS["RESET"])
         status_text = flight_category if flight_category else "Unknown"
+        if is_estimated:
+            status_text += " (estimated)"
         warning_text = get_warning_text(status_color, raw_text, station_id, 
                                       airport_data.get("wind_data"), self.config)
         
         print(f"{station_id} - {airport_data['name']}: {color_code}{status_text}{warning_text}{COLORS['RESET']}")
-        print(f"{DISPLAY_FORMATTING['AIRPORT_INDENT']}METAR: {raw_text}")
+        print(f"{DISPLAY_FORMATTING['AIRPORT_INDENT']}{'Source' if is_estimated else 'METAR'}: {raw_text}")
         
         # Display forecast information if available
         if "forecasts" in airport_data:
@@ -126,7 +129,8 @@ class DisplayManager:
             
             # Print the LED summary line
             color_code = COLORS.get(status_color, COLORS["RESET"])
-            print(f"LED {led_index:2d}: {color_code}{DISPLAY_FORMATTING['LED_INDICATOR']}{COLORS['RESET']} {icao} - {color_code}{flight_category}{warning_text}{COLORS['RESET']} - {name}")
+            est_marker = " ~" if (airport_info and airport_info.get("estimated")) else ""
+            print(f"LED {led_index:2d}: {color_code}{DISPLAY_FORMATTING['LED_INDICATOR']}{COLORS['RESET']} {icao} - {color_code}{flight_category}{warning_text}{est_marker}{COLORS['RESET']} - {name}")
         
         self._print_mode_indicator_led(display_mode, current_forecast_hour)
         print(DISPLAY_FORMATTING["HEADER_LINE"])

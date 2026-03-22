@@ -213,6 +213,87 @@ The LED summary is displayed:
 - When switching display modes via keyboard ('m' key)
 - Shows all configured airports, even those with LEDs currently off
 
+## Wiring
+
+See [WIRING_GUIDE.md](WIRING_GUIDE.md) for detailed wiring diagrams, GPIO pin assignments, power requirements, and safety notes for the LED strip, button, and light sensor.
+
+## Diagnostic and Debug Tools
+
+The project includes several scripts for testing and debugging hardware. All LED/GPIO scripts must be run with `sudo` on the Raspberry Pi.
+
+### LED Strip Test (`led_test.py`)
+
+Full hardware test for the WS2811 LED strip:
+
+```bash
+sudo python3 led_test.py
+```
+
+Runs three tests in sequence:
+1. **White power test** — All LEDs white for 3 seconds (verifies power supply)
+2. **Red chase** — Single red dot traverses the strip (verifies data line integrity)
+3. **Color cycle** — Cycles through green, blue, yellow, purple, cyan (verifies color output)
+
+If the white test is dim or flickering, you likely have a power supply issue. If the chase skips LEDs, check data wiring or look for a dead LED chip in the chain.
+
+### Airport LED Walk Test (`walk_airpots_test.py`)
+
+Lights each airport's configured LED one at a time, printing the ICAO code and LED index:
+
+```bash
+sudo python3 walk_airpots_test.py
+```
+
+Use this to verify that each airport in `metar_config.json` maps to the correct physical LED on your map. At the end, all mapped airport LEDs light up together.
+
+### LED Map Validator (`validate_led_map.py`)
+
+Config-only validation — no hardware or sudo required:
+
+```bash
+python3 validate_led_map.py
+```
+
+Checks for:
+- Duplicate LED index assignments
+- Unmapped LED indices
+- Status of known problem indices
+
+Update the `LED_COUNT` variable in the script to match your strip length.
+
+### I2C / Light Sensor Diagnostic (`diagnose_i2c.py`)
+
+Comprehensive diagnostic for the BH1750 light sensor and I2C bus:
+
+```bash
+sudo python3 diagnose_i2c.py
+```
+
+Checks:
+- I2C kernel modules loaded
+- I2C enabled in `/boot/config.txt`
+- I2C bus scan for devices
+- Python library availability (`smbus2`, `RPi.GPIO`)
+- Direct sensor communication at addresses `0x23` and `0x5C`
+
+### Light Sensor Test (`test_light_sensor.py`)
+
+Quick test for light sensor readings:
+
+```bash
+sudo python3 test_light_sensor.py
+```
+
+### Quick GPIO Button Check
+
+Test the button wiring without running the full application:
+
+```bash
+sudo python3 -c "import RPi.GPIO as GPIO; GPIO.setmode(GPIO.BCM); GPIO.setup(17, GPIO.IN, GPIO.PUD_UP); print('HIGH (not pressed)' if GPIO.input(17) else 'LOW (pressed)'); GPIO.cleanup()"
+```
+
+Should read HIGH when not pressed, LOW when pressed. If it's always LOW, the button is stuck or miswired.
+
 ## Troubleshooting
 
 ### Service won't start
@@ -231,9 +312,22 @@ Common issues:
 ### LEDs not working
 
 - Check if running with sudo
-- Verify GPIO pin configuration
-- Check LED strip connections
-- Test LED strip with a simple test script
+- Verify GPIO pin configuration and wiring (see [WIRING_GUIDE.md](WIRING_GUIDE.md))
+- Check LED strip connections — all components must share a common ground
+- Run `sudo python3 led_test.py` to isolate the issue
+- If colors are wrong (red/green swapped), your strip may use GRB ordering
+
+### Button not responding
+
+- Run the quick GPIO button check above
+- Verify GPIO 17 wiring (see [WIRING_GUIDE.md](WIRING_GUIDE.md))
+- Check debounce — multiple triggers may need increased `DEBOUNCE_TIME` in `button_handler.py`
+
+### Light sensor not detected
+
+- Run `sudo python3 diagnose_i2c.py` for a full diagnostic
+- Run `i2cdetect -y 1` to check if the sensor appears on the I2C bus
+- Verify SDA/SCL wiring and that I2C is enabled (`sudo raspi-config` → Interface Options → I2C)
 
 ### API connection issues
 
@@ -255,7 +349,7 @@ The application uses a structured logging system with the following features:
 ### Running tests
 
 ```bash
-python -m pytest test_metar_monitor.py
+python -m pytest tests/test_metar_monitor.py
 ```
 
 ### Modifying the code
@@ -264,13 +358,21 @@ The codebase is organized as follows:
 
 - `metar_monitor.py` - Main application
 - `metar_api_client.py` - API client for data fetching
+- `metar_processor.py` - METAR data parsing and processing
+- `taf_processor.py` - TAF forecast data processing
 - `airport_utils.py` - Utility functions for runway data and crosswind calculations
-- `constants.py` - Constants, defaults, and configuration settings
+- `airport_data_manager.py` - Airport data storage and management
+- `weather_status.py` - Weather status determination and flight category logic
+- `led_status_calculator.py` - LED color calculation from weather status
+- `metar_display.py` - Terminal display formatting and output
+- `metar_modes.py` - Display mode management (METAR, TAF, Visited, Test)
 - `button_handler.py` - GPIO button handling for mode toggle
+- `light_sensor.py` - BH1750 I2C light sensor for auto-brightness
+- `constants.py` - Constants, defaults, and configuration settings
 - `metar_config.json` - Configuration file
-- `test_metar_monitor.py` - Unit tests
 - `metar-monitor.service` - Systemd service file
 - `metar_monitor_startup.sh` - Startup script for service
+- `WIRING_GUIDE.md` - Hardware wiring diagrams and pin assignments
 
 ### Logging guidelines
 

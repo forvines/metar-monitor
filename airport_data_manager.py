@@ -12,6 +12,7 @@ from airport_utils import calculate_airport_crosswind
 from metar_processor import determine_flight_category
 from taf_processor import process_taf_data as process_taf_data_module
 from weather_status import determine_status_color
+from open_meteo_client import fetch_open_meteo_weather
 
 
 class AirportDataManager:
@@ -44,7 +45,7 @@ class AirportDataManager:
         airport_metars = self._fetch_raw_metar_data(airports)
         if not airport_metars:
             self.logger.error("No METAR data was retrieved.")
-            return False
+            # Still try fallback below
             
         # Fetch TAF data
         all_taf_data = self._fetch_all_taf_data(airports)
@@ -54,6 +55,24 @@ class AirportDataManager:
             if station_id in self.airport_names:
                 taf_data = all_taf_data.get(station_id, None)
                 self._process_airport_data(station_id, metar_data, taf_data, self.airport_names[station_id])
+        
+        # Open-Meteo fallback for airports missing METAR data
+        if self.config.get("open_meteo_fallback", False):
+            missing = [
+                ap for ap in self.config["airports"]
+                if ap["icao"] not in self.airport_data
+                and ap.get("latitude") is not None
+                and ap.get("longitude") is not None
+            ]
+            if missing:
+                self.logger.info("Fetching Open-Meteo fallback for %d airports without METAR data", len(missing))
+                fallback = fetch_open_meteo_weather(missing)
+                for icao, data in fallback.items():
+                    status_color = determine_status_color(
+                        data["raw_metar"], data["flight_category"], data.get("wind_data")
+                    )
+                    data["status_color"] = status_color
+                    self.airport_data[icao] = data
         
         return len(self.airport_data) > 0
     
