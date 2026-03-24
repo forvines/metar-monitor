@@ -32,8 +32,8 @@ This application monitors METAR (Meteorological Aerodrome Reports) for specified
 ### 1. Clone or download this repository
 
 ```bash
-mkdir -p ~/metar_monitor
-cd ~/metar_monitor
+mkdir -p ~/Projects/metar_monitor
+cd ~/Projects/metar_monitor
 # Copy all files to this directory
 ```
 
@@ -303,13 +303,13 @@ The included `update.sh` script lets the Pi automatically pull changes and resta
 1. Make the script executable:
 
 ```bash
-chmod +x ~/metar_monitor/update.sh
+chmod +x ~/Projects/metar_monitor/update.sh
 ```
 
 2. Allow passwordless service restart. Run `sudo visudo` and add:
 
 ```
-pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart metar-monitor.service
+forvines ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart metar-monitor.service
 ```
 
 3. Add a cron job to check every 5 minutes:
@@ -321,10 +321,10 @@ crontab -e
 Add this line:
 
 ```
-*/5 * * * * /home/pi/metar_monitor/update.sh
+*/5 * * * * /home/forvines/Projects/metar_monitor/update.sh
 ```
 
-Push to `origin/main` and the Pi will pull changes and restart within 5 minutes. Check `~/metar_monitor/logs/update.log` for update history.
+Push to `origin/main` and the Pi will pull changes and restart within 5 minutes. Check `~/Projects/metar_monitor/logs/update.log` for update history.
 
 ## Automatic Airport Visit Tracking
 
@@ -361,7 +361,7 @@ crontab -e
 Add this line:
 
 ```
-*/10 * * * * /usr/bin/python3 /home/pi/metar_monitor/visit_tracker.py >> /home/pi/metar_monitor/logs/visit_tracker.log 2>&1
+*/10 * * * * /usr/bin/python3 /home/forvines/Projects/metar_monitor/visit_tracker.py >> /home/forvines/Projects/metar_monitor/logs/visit_tracker.log 2>&1
 ```
 
 ## Remote Access (SSH)
@@ -376,7 +376,7 @@ sudo systemctl start ssh
 ### Copy your SSH key from your development machine
 
 ```bash
-ssh-copy-id pi@raspberrypi.local
+ssh-copy-id forvines@raspberrypi.local
 ```
 
 If `raspberrypi.local` doesn't resolve, use the Pi's IP address (run `hostname -I` on the Pi to find it).
@@ -384,7 +384,7 @@ If `raspberrypi.local` doesn't resolve, use the Pi's IP address (run `hostname -
 ### Test the connection
 
 ```bash
-ssh pi@raspberrypi.local
+ssh forvines@raspberrypi.local
 ```
 
 ### Lock down to key-only authentication

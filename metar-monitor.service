@@ -47,7 +47,7 @@ ExecStart=/home/forvines/Projects/metar_monitor/metar_monitor_startup.sh --log
 ExecStop=/usr/bin/python3 - <<'PY'
 from rpi_ws281x import PixelStrip, Color
 import json
-cfg = json.load(open("/home/pi/metar_monitor/metar_config.json"))
+cfg = json.load(open("/home/forvines/Projects/metar_monitor/metar_config.json"))
 strip = PixelStrip(cfg["led_count"], cfg["led_pin"], cfg["led_freq_hz"],
                    cfg["led_dma"], cfg["led_invert"], cfg["led_brightness"],
                    cfg["led_channel"])

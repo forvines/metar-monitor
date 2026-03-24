@@ -1,7 +1,7 @@
 #!/bin/bash
 # Auto-update metar-monitor from git and restart service if changed
 
-REPO_DIR="$HOME/metar_monitor"
+REPO_DIR="$HOME/Projects/metar_monitor"
 LOG_FILE="$REPO_DIR/logs/update.log"
 
 cd "$REPO_DIR" || exit 1

@@ -1,5 +1,5 @@
 #!/bin/bash
-# /home/pi/metar_monitor_startup.sh
+# /home/forvines/Projects/metar_monitor/metar_monitor_startup.sh
 # Startup script for METAR Monitor
 
 # Directory where the METAR monitor is installed
