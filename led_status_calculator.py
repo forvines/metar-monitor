@@ -50,7 +50,11 @@ class LEDStatusCalculator:
             return LEDStatusCalculator._get_visited_status(airport_config)
         else:  # DisplayMode.TEST
             has_metar = bool(airport_data.get("raw_metar"))
-            return ("GREEN" if has_metar else "RED", "Valid METAR" if has_metar else "No METAR")
+            if not has_metar:
+                return ("RED", "No METAR")
+            if airport_data.get("estimated"):
+                return ("YELLOW", "Approximate")
+            return ("GREEN", "Valid METAR")
     
     @staticmethod
     def _get_status_without_data(icao, display_mode, airport_config):
