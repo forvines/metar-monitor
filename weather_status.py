@@ -94,7 +94,8 @@ def get_warning_text(status_color: str, raw_text: str, airport_id: str = None, w
     # Check for strong winds (third priority)
     if re.search(REGEX_PATTERNS["WINDS"], raw_text):
         wind_match = re.search(REGEX_PATTERNS["WINDS"], raw_text)
-        return f" - Winds {wind_match.group(1)}KT"
+        if int(wind_match.group(1)) > THRESHOLDS["WINDS"]:
+            return f" - Winds {wind_match.group(1)}KT"
         
     # Default warning if we can't determine the specific reason
     return " - Weather warning"
