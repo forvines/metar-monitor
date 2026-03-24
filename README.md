@@ -221,12 +221,12 @@ See [WIRING_GUIDE.md](WIRING_GUIDE.md) for detailed wiring diagrams, GPIO pin as
 
 The project includes several scripts for testing and debugging hardware. All LED/GPIO scripts must be run with `sudo` on the Raspberry Pi.
 
-### LED Strip Test (`led_test.py`)
+### LED Strip Test (`tests/led_test.py`)
 
 Full hardware test for the WS2811 LED strip:
 
 ```bash
-sudo python3 led_test.py
+sudo python3 tests/led_test.py
 ```
 
 Runs three tests in sequence:
@@ -236,22 +236,22 @@ Runs three tests in sequence:
 
 If the white test is dim or flickering, you likely have a power supply issue. If the chase skips LEDs, check data wiring or look for a dead LED chip in the chain.
 
-### Airport LED Walk Test (`walk_airpots_test.py`)
+### Airport LED Walk Test (`tests/walk_airports_test.py`)
 
 Lights each airport's configured LED one at a time, printing the ICAO code and LED index:
 
 ```bash
-sudo python3 walk_airpots_test.py
+sudo python3 tests/walk_airports_test.py
 ```
 
 Use this to verify that each airport in `metar_config.json` maps to the correct physical LED on your map. At the end, all mapped airport LEDs light up together.
 
-### LED Map Validator (`validate_led_map.py`)
+### LED Map Validator (`tests/validate_led_map.py`)
 
 Config-only validation — no hardware or sudo required:
 
 ```bash
-python3 validate_led_map.py
+python3 tests/validate_led_map.py
 ```
 
 Checks for:
@@ -261,12 +261,12 @@ Checks for:
 
 Update the `LED_COUNT` variable in the script to match your strip length.
 
-### I2C / Light Sensor Diagnostic (`diagnose_i2c.py`)
+### I2C / Light Sensor Diagnostic (`tests/diagnose_i2c.py`)
 
 Comprehensive diagnostic for the BH1750 light sensor and I2C bus:
 
 ```bash
-sudo python3 diagnose_i2c.py
+sudo python3 tests/diagnose_i2c.py
 ```
 
 Checks:
@@ -276,12 +276,12 @@ Checks:
 - Python library availability (`smbus2`, `RPi.GPIO`)
 - Direct sensor communication at addresses `0x23` and `0x5C`
 
-### Light Sensor Test (`test_light_sensor.py`)
+### Light Sensor Test (`tests/test_light_sensor_hw.py`)
 
 Quick test for light sensor readings:
 
 ```bash
-sudo python3 test_light_sensor.py
+sudo python3 tests/test_light_sensor_hw.py
 ```
 
 ### Quick GPIO Button Check
@@ -324,7 +324,7 @@ Add this line:
 */5 * * * * /home/pi/metar_monitor/update.sh
 ```
 
-Push to `origin/main` and the Pi will pull changes and restart within 5 minutes. Check `~/metar_monitor/update.log` for update history.
+Push to `origin/main` and the Pi will pull changes and restart within 5 minutes. Check `~/metar_monitor/logs/update.log` for update history.
 
 ## Automatic Airport Visit Tracking
 
@@ -361,7 +361,7 @@ crontab -e
 Add this line:
 
 ```
-*/10 * * * * /usr/bin/python3 /home/pi/metar_monitor/visit_tracker.py >> /home/pi/metar_monitor/visit_tracker.log 2>&1
+*/10 * * * * /usr/bin/python3 /home/pi/metar_monitor/visit_tracker.py >> /home/pi/metar_monitor/logs/visit_tracker.log 2>&1
 ```
 
 ## Remote Access (SSH)
@@ -417,7 +417,7 @@ Common issues:
 - Check if running with sudo
 - Verify GPIO pin configuration and wiring (see [WIRING_GUIDE.md](WIRING_GUIDE.md))
 - Check LED strip connections — all components must share a common ground
-- Run `sudo python3 led_test.py` to isolate the issue
+- Run `sudo python3 tests/led_test.py` to isolate the issue
 - If colors are wrong (red/green swapped), your strip may use GRB ordering
 
 ### Button not responding
@@ -428,7 +428,7 @@ Common issues:
 
 ### Light sensor not detected
 
-- Run `sudo python3 diagnose_i2c.py` for a full diagnostic
+- Run `sudo python3 tests/diagnose_i2c.py` for a full diagnostic
 - Run `i2cdetect -y 1` to check if the sensor appears on the I2C bus
 - Verify SDA/SCL wiring and that I2C is enabled (`sudo raspi-config` → Interface Options → I2C)
 
@@ -436,7 +436,7 @@ Common issues:
 
 - Check internet connection
 - Verify API URLs in configuration
-- Review logs for specific error messages: `cat metar_monitor.log`
+- Review logs for specific error messages: `cat logs/metar_monitor.log`
 
 ### Logging
 
@@ -445,7 +445,7 @@ The application uses a structured logging system with the following features:
 - 7-day log retention
 - Combined console and file logging
 - Different log levels for debugging (INFO level by default)
-- Logs stored in `metar_monitor.log` in the application directory
+- Logs stored in `logs/metar_monitor.log` in the application directory
 
 ## Development
 

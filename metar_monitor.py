@@ -287,9 +287,12 @@ def main():
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter(log_format))
     
+    # Ensure logs directory exists
+    os.makedirs("logs", exist_ok=True)
+    
     # Set up file handler with rotation - 7 days of logs, rotating at midnight
     file_handler = TimedRotatingFileHandler(
-        filename="metar_monitor.log",
+        filename="logs/metar_monitor.log",
         when="midnight",
         interval=1,
         backupCount=7,  # Keep 7 days of logs

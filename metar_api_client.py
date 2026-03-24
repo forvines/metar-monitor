@@ -18,7 +18,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("metar_monitor.log"),
+        logging.FileHandler("logs/metar_monitor.log"),
         logging.StreamHandler()
     ]
 )
