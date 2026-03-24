@@ -228,7 +228,8 @@ class METARStatus:
     
     def update_led_display(self):
         """Update LEDs using the mode manager"""
-        self.mode_manager.update_led_display(self.data_manager.airport_data)
+        with self._lock:
+            self.mode_manager.update_led_display(self.data_manager.airport_data)
 
     def print_color_legend(self):
         """Print color legend using display manager"""

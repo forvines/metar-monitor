@@ -98,42 +98,55 @@ class DisplayManager:
     def print_led_summary(self, airport_data, display_mode, current_forecast_hour):
         """Print a summary of all LEDs with their colors and airport names"""
         self.logger.info("Displaying LED summary")
-        print("\n" + DISPLAY_FORMATTING["HEADER_LINE"])
-        print("LED Summary:")
-        print(DISPLAY_FORMATTING["SEPARATOR_LINE"])
         
-        sorted_airports = self._get_sorted_airports()
+        # Temporarily suppress console logging to prevent interleaved output
+        root_logger = logging.getLogger()
+        console_handlers = [h for h in root_logger.handlers if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)]
+        original_levels = {}
+        for h in console_handlers:
+            original_levels[h] = h.level
+            h.setLevel(logging.CRITICAL)
         
-        for led_index, icao, name in sorted_airports:
-            airport_info = airport_data.get(icao)
-            # Find airport config for this ICAO
-            airport_config = None
-            for config in self.config["airports"]:
-                if config["icao"] == icao:
-                    airport_config = config
-                    break
+        try:
+            print("\n" + DISPLAY_FORMATTING["HEADER_LINE"])
+            print("LED Summary:")
+            print(DISPLAY_FORMATTING["SEPARATOR_LINE"])
             
-            status_color, flight_category = LEDStatusCalculator.get_status_for_airport(
-                icao, airport_info, display_mode, current_forecast_hour, airport_config
-            )
+            sorted_airports = self._get_sorted_airports()
             
-            # Get warning text if applicable
-            warning_text = ""
-            if (status_color == "YELLOW" and 
-                display_mode != 2 and  # DisplayMode.AIRPORTS_VISITED
-                icao in airport_data):
-                warning_text = get_warning_text(
-                    status_color, airport_data[icao].get("raw_metar", ""), icao,
-                    airport_data[icao].get("wind_data"), self.config
+            for led_index, icao, name in sorted_airports:
+                airport_info = airport_data.get(icao)
+                # Find airport config for this ICAO
+                airport_config = None
+                for config in self.config["airports"]:
+                    if config["icao"] == icao:
+                        airport_config = config
+                        break
+                
+                status_color, flight_category = LEDStatusCalculator.get_status_for_airport(
+                    icao, airport_info, display_mode, current_forecast_hour, airport_config
                 )
+                
+                # Get warning text if applicable
+                warning_text = ""
+                if (status_color == "YELLOW" and 
+                    display_mode != 2 and  # DisplayMode.AIRPORTS_VISITED
+                    icao in airport_data):
+                    warning_text = get_warning_text(
+                        status_color, airport_data[icao].get("raw_metar", ""), icao,
+                        airport_data[icao].get("wind_data"), self.config
+                    )
+                
+                # Print the LED summary line
+                color_code = COLORS.get(status_color, COLORS["RESET"])
+                est_marker = " ~" if (airport_info and airport_info.get("estimated")) else ""
+                print(f"LED {led_index:2d}: {color_code}{DISPLAY_FORMATTING['LED_INDICATOR']}{COLORS['RESET']} {icao} - {color_code}{flight_category}{warning_text}{est_marker}{COLORS['RESET']} - {name}")
             
-            # Print the LED summary line
-            color_code = COLORS.get(status_color, COLORS["RESET"])
-            est_marker = " ~" if (airport_info and airport_info.get("estimated")) else ""
-            print(f"LED {led_index:2d}: {color_code}{DISPLAY_FORMATTING['LED_INDICATOR']}{COLORS['RESET']} {icao} - {color_code}{flight_category}{warning_text}{est_marker}{COLORS['RESET']} - {name}")
-        
-        self._print_mode_indicator_led(display_mode, current_forecast_hour)
-        print(DISPLAY_FORMATTING["HEADER_LINE"])
+            self._print_mode_indicator_led(display_mode, current_forecast_hour)
+            print(DISPLAY_FORMATTING["HEADER_LINE"])
+        finally:
+            for h in console_handlers:
+                h.setLevel(original_levels[h])
     
     def _get_sorted_airports(self):
         """Get airports sorted by LED index"""
