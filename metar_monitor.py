@@ -162,22 +162,24 @@ class LEDController:
         self.last_brightness_update = current_time
     
     def set_led(self, index, color_name):
-        """Set an LED to a specific color"""
+        """Set an LED to a specific color (batched, call show() to flush)"""
         if not self.initialized or index >= self.config["led_count"]:
             logging.warning(f"LED index {index} out of range or LED strip not initialized.")
             return
             
-        # Update brightness before setting LED
-        self.update_brightness()
-            
         if color_name in LED_COLORS:
             color = LED_COLORS[color_name]
             self.strip.setPixelColor(index, color)
-            self.strip.show()
         else:
             logging.warning(f"Unknown color name: {color_name}. Using default OFF color.")
             self.strip.setPixelColor(index, LED_COLORS["OFF"])
-            self.strip.show()
+    
+    def show(self):
+        """Flush all pending LED changes to the strip"""
+        if not self.initialized:
+            return
+        self.update_brightness()
+        self.strip.show()
     
     def clear(self):
         """Turn off all LEDs"""
@@ -265,6 +267,10 @@ class METARStatus:
             # Display results for each airport
             for station_id, airport_data in self.data_manager.airport_data.items():
                 self.display_manager.display_airport_data(station_id, airport_data)
+            
+            # Flush LED changes after all airports are set
+            if self.display_manager.led_controller:
+                self.display_manager.led_controller.show()
             
             # Print LED summary
             self.print_led_summary()

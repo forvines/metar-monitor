@@ -6,6 +6,7 @@ Handles all display output including LED summary, airport data display, and lege
 """
 
 import logging
+import sys
 from constants import COLORS, FLIGHT_CATEGORIES, THRESHOLDS, DISPLAY_FORMATTING, MODE_INDICATOR_COLOR, MODE_NAMES
 from weather_status import get_warning_text
 from led_status_calculator import LEDStatusCalculator
@@ -144,6 +145,7 @@ class DisplayManager:
             
             self._print_mode_indicator_led(display_mode, current_forecast_hour)
             print(DISPLAY_FORMATTING["HEADER_LINE"])
+            sys.stdout.flush()
         finally:
             for h in console_handlers:
                 h.setLevel(original_levels[h])

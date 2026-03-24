@@ -93,6 +93,9 @@ class ModeManager:
             
         # Update mode LEDs
         self._update_mode_leds()
+        
+        # Flush all changes to the strip in one shot
+        self.led_controller.show()
     
     def _get_led_color_for_mode(self, airport, data):
         """Get LED color based on current display mode"""
