@@ -294,6 +294,38 @@ sudo python3 -c "import RPi.GPIO as GPIO; GPIO.setmode(GPIO.BCM); GPIO.setup(17,
 
 Should read HIGH when not pressed, LOW when pressed. If it's always LOW, the button is stuck or miswired.
 
+## Auto-Update from Git
+
+The included `update.sh` script lets the Pi automatically pull changes and restart the service.
+
+### Setup
+
+1. Make the script executable:
+
+```bash
+chmod +x ~/metar_monitor/update.sh
+```
+
+2. Allow passwordless service restart. Run `sudo visudo` and add:
+
+```
+pi ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart metar-monitor.service
+```
+
+3. Add a cron job to check every 5 minutes:
+
+```bash
+crontab -e
+```
+
+Add this line:
+
+```
+*/5 * * * * /home/pi/metar_monitor/update.sh
+```
+
+Push to `origin/main` and the Pi will pull changes and restart within 5 minutes. Check `~/metar_monitor/update.log` for update history.
+
 ## Troubleshooting
 
 ### Service won't start
