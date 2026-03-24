@@ -326,6 +326,44 @@ Add this line:
 
 Push to `origin/main` and the Pi will pull changes and restart within 5 minutes. Check `~/metar_monitor/update.log` for update history.
 
+## Automatic Airport Visit Tracking
+
+The `visit_tracker.py` script automatically marks airports as visited when tracked aircraft land at them, using the free OpenSky Network API.
+
+### How it works
+
+- Polls OpenSky every 10 minutes for live ADS-B positions of configured aircraft
+- When an aircraft is on the ground within 3nm of a configured airport, sets `visited: true` in `metar_config.json`
+- Logs each visit with timestamp and aircraft to `visited_log.json`
+- Once visited, always visited — the script only updates unvisited airports
+
+### Tracked aircraft
+
+Edit `TRACKED_AIRCRAFT` in `visit_tracker.py` to configure tail numbers, ICAO24 hex codes, and earliest visit dates:
+
+```python
+TRACKED_AIRCRAFT = {
+    "N8279Z": {"icao24": "ab4e87", "since": "2024-09-01"},
+    "N7331A": {"icao24": "a9d8ac", "since": "2026-01-01"},
+}
+```
+
+You can look up ICAO24 hex codes at [adsbdb.com](https://api.adsbdb.com/v0/aircraft/N8279Z).
+
+### Setup
+
+Add a cron job to run every 10 minutes:
+
+```bash
+crontab -e
+```
+
+Add this line:
+
+```
+*/10 * * * * /usr/bin/python3 /home/pi/metar_monitor/visit_tracker.py >> /home/pi/metar_monitor/visit_tracker.log 2>&1
+```
+
 ## Remote Access (SSH)
 
 ### Enable SSH on the Pi
