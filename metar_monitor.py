@@ -62,6 +62,7 @@ class KeyboardHandler:
         self.callback = callback
         self.running = False
         self.thread = None
+        self.last_press_time = 0
     
     def start(self):
         self.running = True
@@ -78,7 +79,10 @@ class KeyboardHandler:
                 if select.select([sys.stdin], [], [], 0.1)[0]:
                     key = sys.stdin.read(1)
                     if key.lower() == 'm':
-                        self.callback()
+                        now = time.time()
+                        if (now - self.last_press_time) >= 0.5:
+                            self.callback()
+                            self.last_press_time = time.time()
             except:
                 pass
 
@@ -190,6 +194,7 @@ class METARStatus:
     def __init__(self, config, led_controller=None):
         self.config = config
         self.logger = logging.getLogger("metar_status")
+        self._lock = threading.RLock()
         
         # Initialize managers
         self.data_manager = AirportDataManager(config)
@@ -205,20 +210,21 @@ class METARStatus:
     
     def toggle_display_mode(self):
         """Toggle display mode using the mode manager"""
-        mode = self.mode_manager.toggle_display_mode()
-        self.mode_manager.update_led_display(self.data_manager.airport_data)
-        
-        # Print status message
-        print("\n" + DISPLAY_FORMATTING["HEADER_LINE"])
-        if self.mode_manager.display_mode == DisplayMode.METAR:
-            print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode)}")
-        elif self.mode_manager.display_mode == DisplayMode.TAF:
-            print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode, self.mode_manager.current_forecast_hour)}")
-        else:
-            print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode)}")
-        print(DISPLAY_FORMATTING["HEADER_LINE"])
-        
-        return mode
+        with self._lock:
+            mode = self.mode_manager.toggle_display_mode()
+            self.mode_manager.update_led_display(self.data_manager.airport_data)
+            
+            # Print status message
+            print("\n" + DISPLAY_FORMATTING["HEADER_LINE"])
+            if self.mode_manager.display_mode == DisplayMode.METAR:
+                print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode)}")
+            elif self.mode_manager.display_mode == DisplayMode.TAF:
+                print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode, self.mode_manager.current_forecast_hour)}")
+            else:
+                print(f"Display mode changed to: {DisplayMode.get_name(self.mode_manager.display_mode)}")
+            print(DISPLAY_FORMATTING["HEADER_LINE"])
+            
+            return mode
     
     def update_led_display(self):
         """Update LEDs using the mode manager"""
@@ -234,33 +240,35 @@ class METARStatus:
     
     def print_led_summary(self):
         """Print LED summary using display manager"""
-        self.display_manager.print_led_summary(
-            self.data_manager.airport_data, 
-            self.mode_manager.display_mode, 
-            self.mode_manager.current_forecast_hour
-        )
+        with self._lock:
+            self.display_manager.print_led_summary(
+                self.data_manager.airport_data, 
+                self.mode_manager.display_mode, 
+                self.mode_manager.current_forecast_hour
+            )
     
     def fetch_metar_data(self):
         """Fetch and process METAR data using data manager"""
-        # Print legends and headers
-        self.print_color_legend()
-        self.print_led_mapping()
-        print("\nFetching METAR data for airports...")
-        print(DISPLAY_FORMATTING["HEADER_LINE"])
-        
-        # Fetch and process data using data manager
-        success = self.data_manager.fetch_and_process_data()
-        if not success:
-            return False
-        
-        # Display results for each airport
-        for station_id, airport_data in self.data_manager.airport_data.items():
-            self.display_manager.display_airport_data(station_id, airport_data)
-        
-        # Print LED summary
-        self.print_led_summary()
-        
-        return True
+        with self._lock:
+            # Print legends and headers
+            self.print_color_legend()
+            self.print_led_mapping()
+            print("\nFetching METAR data for airports...")
+            print(DISPLAY_FORMATTING["HEADER_LINE"])
+            
+            # Fetch and process data using data manager
+            success = self.data_manager.fetch_and_process_data()
+            if not success:
+                return False
+            
+            # Display results for each airport
+            for station_id, airport_data in self.data_manager.airport_data.items():
+                self.display_manager.display_airport_data(station_id, airport_data)
+            
+            # Print LED summary
+            self.print_led_summary()
+            
+            return True
     
 
 

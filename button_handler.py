@@ -22,7 +22,7 @@ except ImportError:
     
 # Constants
 DEFAULT_BUTTON_PIN = 17  # GPIO pin for the button (BCM numbering)
-DEBOUNCE_TIME = 0.3      # Debounce time in seconds
+DEBOUNCE_TIME = 0.5      # Debounce time in seconds
 
 class ButtonHandler:
     """Handler for GPIO button to toggle display modes"""
@@ -115,7 +115,6 @@ class ButtonHandler:
                     # Check for debounce
                     current_time = time.time()
                     if (current_time - self.last_press_time) >= DEBOUNCE_TIME:
-                        self.last_press_time = current_time
                         logger.info("Button pressed - executing callback")
                         
                         # Execute the callback if it exists
@@ -126,6 +125,9 @@ class ButtonHandler:
                                 logger.error(f"Error in button callback: {str(e)}")
                         else:
                             logger.warning("Button pressed but no callback configured")
+                        
+                        # Set last_press_time AFTER callback so debounce covers execution time
+                        self.last_press_time = time.time()
                     else:
                         logger.debug(f"Button press ignored due to debounce (time since last: {current_time - self.last_press_time:.2f}s)")
                     
