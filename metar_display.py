@@ -132,6 +132,7 @@ class DisplayManager:
                 warning_text = ""
                 if (status_color == "YELLOW" and 
                     display_mode != 2 and  # DisplayMode.AIRPORTS_VISITED
+                    display_mode != 3 and  # DisplayMode.TEST
                     icao in airport_data):
                     warning_text = get_warning_text(
                         status_color, airport_data[icao].get("raw_metar", ""), icao,
