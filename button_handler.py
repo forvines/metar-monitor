@@ -37,7 +37,7 @@ class ButtonHandler:
         self.button_pin = button_pin
         self.callback = callback
         self.is_running = False
-        self.last_press_time = 0
+        self.last_press_time = time.time()  # Ignore spurious presses at startup
         self.thread = None
         
         # Early exit if GPIO is not available
