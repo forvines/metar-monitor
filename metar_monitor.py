@@ -388,9 +388,6 @@ def main():
         # Initial data fetch
         if metar_status.fetch_metar_data():
             print("\nCompleted fetching all airport data.")
-            
-            # Update LED display based on initial mode
-            metar_status.update_led_display()
         
         while True:
             # Wait for the configured update interval
@@ -412,9 +409,6 @@ def main():
             # Fetch updated data
             if metar_status.fetch_metar_data():
                 print("\nCompleted updating airport data.")
-                
-                # Update LED display based on current mode
-                metar_status.update_led_display()
     
     #except KeyboardInterrupt:
     finally:

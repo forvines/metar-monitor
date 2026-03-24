@@ -79,7 +79,7 @@ class ModeManager:
                    f"TAF {self.current_forecast_hour}h" if self.display_mode == DisplayMode.TAF else \
                    "Airports Visited" if self.display_mode == DisplayMode.AIRPORTS_VISITED else \
                    "Test"
-        self.logger.info("Updating LED display in %s mode", mode_name)
+        self.logger.debug("Updating LED display in %s mode", mode_name)
         
         # Update airport LEDs - always update all configured airports
         for airport_icao, led_index in self.airport_to_led.items():
