@@ -326,6 +326,39 @@ Add this line:
 
 Push to `origin/main` and the Pi will pull changes and restart within 5 minutes. Check `~/metar_monitor/update.log` for update history.
 
+## Remote Access (SSH)
+
+### Enable SSH on the Pi
+
+```bash
+sudo systemctl enable ssh
+sudo systemctl start ssh
+```
+
+### Copy your SSH key from your development machine
+
+```bash
+ssh-copy-id pi@raspberrypi.local
+```
+
+If `raspberrypi.local` doesn't resolve, use the Pi's IP address (run `hostname -I` on the Pi to find it).
+
+### Test the connection
+
+```bash
+ssh pi@raspberrypi.local
+```
+
+### Lock down to key-only authentication
+
+Once key auth is working, disable password login on the Pi:
+
+```bash
+sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo systemctl restart sshd
+```
+
 ## Troubleshooting
 
 ### Service won't start
