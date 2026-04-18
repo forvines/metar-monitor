@@ -418,6 +418,13 @@ def main():
             # Fetch updated data
             if metar_status.fetch_metar_data():
                 print("\nCompleted updating airport data.")
+            
+            # Reset to METAR mode after each update to recover from phantom button presses
+            metar_status.mode_manager.display_mode = DisplayMode.METAR
+            metar_status.mode_manager.forecast_hour_index = 0
+            forecast_hours = config.get("forecast_hours", [4])
+            metar_status.mode_manager.current_forecast_hour = forecast_hours[0] if forecast_hours else 4
+            metar_status.update_led_display()
     
     #except KeyboardInterrupt:
     finally:
