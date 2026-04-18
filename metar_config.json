@@ -1291,12 +1291,12 @@
     ],
     "led_pin": 18,
     "led_count": 103,
-    "led_brightness": 192,
+    "led_brightness": 255,
     "led_freq_hz": 800000,
     "led_dma": 10,
     "led_invert": false,
     "led_channel": 0,
     "button_pin": 17,
     "open_meteo_fallback": true,
-    "mode_revert_seconds": 10
+    "mode_revert_seconds": 15
 }
