@@ -85,7 +85,7 @@
         },
         {
             "icao": "KSLE",
-            "name": "McNary Field (Salem\u2013Willamette Valley Airport)",
+            "name": "McNary Field (Salem–Willamette Valley Airport)",
             "led": 15,
             "visited": false,
             "runways": [
@@ -155,7 +155,7 @@
         },
         {
             "icao": "KHIO",
-            "name": "Portland\u2013Hillsboro Airport",
+            "name": "Portland–Hillsboro Airport",
             "led": 20,
             "visited": false,
             "runways": [
@@ -207,7 +207,7 @@
         },
         {
             "icao": "KTTD",
-            "name": "Portland\u2013Troutdale Airport",
+            "name": "Portland–Troutdale Airport",
             "led": 23,
             "visited": false,
             "runways": [
@@ -287,7 +287,7 @@
         },
         {
             "icao": "KKLS",
-            "name": "Southwest Washington Regional Airport (Kelso\u2013Longview)",
+            "name": "Southwest Washington Regional Airport (Kelso–Longview)",
             "led": 29,
             "visited": true,
             "runways": [
@@ -299,7 +299,7 @@
         },
         {
             "icao": "KTDO",
-            "name": "Toledo\u2013Winlock (South Lewis County) Airport",
+            "name": "Toledo–Winlock (South Lewis County) Airport",
             "led": 30,
             "visited": true,
             "runways": [
@@ -810,7 +810,7 @@
         {
             "icao": "KEAT",
             "name": "Pangborn Memorial Airport (Wenatchee)",
-            "led": 68,
+            "led": 67,
             "visited": true,
             "runways": [
                 {
@@ -822,7 +822,7 @@
         {
             "icao": "S10",
             "name": "Lake Chelan Airport",
-            "led": 69,
+            "led": 67,
             "visited": true,
             "runways": [
                 {
@@ -836,7 +836,7 @@
         {
             "icao": "2S0",
             "name": "Twisp Municipal Airport",
-            "led": 70,
+            "led": 68,
             "visited": false,
             "runways": [
                 {
@@ -850,7 +850,7 @@
         {
             "icao": "KS52",
             "name": "Methow State Airport",
-            "led": 71,
+            "led": 68,
             "visited": false,
             "runways": [
                 {
@@ -862,7 +862,7 @@
         {
             "icao": "KOMK",
             "name": "Omak Airport",
-            "led": 72,
+            "led": 68,
             "visited": false,
             "runways": [
                 {
@@ -874,7 +874,7 @@
         {
             "icao": "S35",
             "name": "Okanogan Legion Airport",
-            "led": 73,
+            "led": 69,
             "visited": false,
             "runways": [
                 {
@@ -888,7 +888,7 @@
         {
             "icao": "K3W7",
             "name": "Grand Coulee Dam Airport",
-            "led": 74,
+            "led": 70,
             "visited": true,
             "runways": [
                 {
@@ -900,7 +900,7 @@
         {
             "icao": "K63S",
             "name": "Colville Municipal Airport",
-            "led": 75,
+            "led": 71,
             "visited": false,
             "runways": [
                 {
@@ -912,7 +912,7 @@
         {
             "icao": "KSZT",
             "name": "Sandpoint Airport",
-            "led": 76,
+            "led": 72,
             "visited": false,
             "runways": [
                 {
@@ -924,7 +924,7 @@
         {
             "icao": "KCOE",
             "name": "Coeur d'Alene/Pappy Boyington Field",
-            "led": 77,
+            "led": 73,
             "visited": false,
             "runways": [
                 {
@@ -936,7 +936,7 @@
         {
             "icao": "KDEW",
             "name": "Deer Park Municipal Airport",
-            "led": 78,
+            "led": 74,
             "visited": false,
             "runways": [
                 {
@@ -948,7 +948,7 @@
         {
             "icao": "70S",
             "name": "Mead Flying Service Airport",
-            "led": 79,
+            "led": 75,
             "visited": false,
             "runways": [
                 {
@@ -962,7 +962,7 @@
         {
             "icao": "KSFF",
             "name": "Felts Field",
-            "led": 80,
+            "led": 76,
             "visited": false,
             "runways": [
                 {
@@ -978,7 +978,7 @@
         {
             "icao": "KGEG",
             "name": "Spokane International Airport",
-            "led": 81,
+            "led": 77,
             "visited": true,
             "runways": [
                 {
@@ -998,7 +998,7 @@
         {
             "icao": "KSKA",
             "name": "Fairchild Air Force Base",
-            "led": 82,
+            "led": 78,
             "visited": false,
             "runways": [
                 {
@@ -1010,7 +1010,7 @@
         {
             "icao": "KEPH",
             "name": "Ephrata Municipal Airport",
-            "led": 83,
+            "led": 79,
             "visited": false,
             "runways": [
                 {
@@ -1026,7 +1026,7 @@
         {
             "icao": "KMWH",
             "name": "Grant County International (Moses Lake)",
-            "led": 84,
+            "led": 80,
             "visited": false,
             "runways": [
                 {
@@ -1046,7 +1046,7 @@
         {
             "icao": "W20",
             "name": "Moses Lake Municipal Airport",
-            "led": 85,
+            "led": 81,
             "visited": false,
             "runways": [
                 {
@@ -1060,7 +1060,7 @@
         {
             "icao": "S70",
             "name": "Othello Municipal Airport",
-            "led": 86,
+            "led": 82,
             "visited": true,
             "runways": [
                 {
@@ -1073,8 +1073,8 @@
         },
         {
             "icao": "KPUW",
-            "name": "Pullman\u2013Moscow Regional Airport",
-            "led": 87,
+            "name": "Pullman–Moscow Regional Airport",
+            "led": 83,
             "visited": false,
             "runways": [
                 {
@@ -1085,8 +1085,8 @@
         },
         {
             "icao": "KLWS",
-            "name": "Lewiston\u2013Nez Perce County Airport",
-            "led": 88,
+            "name": "Lewiston–Nez Perce County Airport",
+            "led": 84,
             "visited": false,
             "runways": [
                 {
@@ -1098,7 +1098,7 @@
         {
             "icao": "KJSY",
             "name": "Joseph State Airport",
-            "led": 89,
+            "led": 85,
             "visited": false,
             "runways": [
                 {
@@ -1110,7 +1110,7 @@
         {
             "icao": "KBKE",
             "name": "Baker City Municipal Airport",
-            "led": 90,
+            "led": 86,
             "visited": false,
             "runways": [
                 {
@@ -1126,7 +1126,7 @@
         {
             "icao": "KLGD",
             "name": "La Grande Airport",
-            "led": 91,
+            "led": 87,
             "visited": true,
             "runways": [
                 {
@@ -1138,7 +1138,7 @@
         {
             "icao": "KALW",
             "name": "Walla Walla Regional Airport",
-            "led": 92,
+            "led": 88,
             "visited": false,
             "runways": [
                 {
@@ -1150,7 +1150,7 @@
         {
             "icao": "KPDT",
             "name": "Eastern Oregon Regional Airport at Pendleton",
-            "led": 93,
+            "led": 89,
             "visited": false,
             "runways": [
                 {
@@ -1166,7 +1166,7 @@
         {
             "icao": "KPSC",
             "name": "Tri-Cities Airport",
-            "led": 94,
+            "led": 90,
             "visited": true,
             "runways": [
                 {
@@ -1178,7 +1178,7 @@
         {
             "icao": "KRLD",
             "name": "Richland Airport",
-            "led": 95,
+            "led": 91,
             "visited": true,
             "runways": [
                 {
@@ -1190,7 +1190,7 @@
         {
             "icao": "S40",
             "name": "Prosser Airport",
-            "led": 96,
+            "led": 92,
             "visited": false,
             "runways": [
                 {
@@ -1204,7 +1204,7 @@
         {
             "icao": "KYKM",
             "name": "Yakima Air Terminal (McAllister Field)",
-            "led": 97,
+            "led": 93,
             "visited": true,
             "runways": [
                 {
@@ -1216,7 +1216,7 @@
         {
             "icao": "K9S9",
             "name": "Lexington Airport",
-            "led": 98,
+            "led": 94,
             "visited": false,
             "runways": [
                 {
@@ -1228,7 +1228,7 @@
         {
             "icao": "KDLS",
             "name": "Columbia Gorge Regional/The Dalles Municipal",
-            "led": 99,
+            "led": 95,
             "visited": false,
             "runways": [
                 {
@@ -1240,7 +1240,7 @@
         {
             "icao": "KS33",
             "name": "Madras Municipal Airport",
-            "led": 100,
+            "led": 96,
             "visited": false,
             "runways": [
                 {
@@ -1256,7 +1256,7 @@
         {
             "icao": "11S",
             "name": "Sekiu Airport",
-            "led": 101,
+            "led": 97,
             "visited": false,
             "runways": [
                 {
@@ -1270,7 +1270,7 @@
         {
             "icao": "KUIL",
             "name": "Quillayute Airport",
-            "led": 102,
+            "led": 98,
             "visited": false,
             "runways": [
                 {
