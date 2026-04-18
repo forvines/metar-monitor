@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Walk through each airport LED one at a time, 3 seconds each, logging details."""
-import time, json, logging
+"""Walk through each airport LED interactively. Press any key to advance, 'b' to go back, 'q' to quit."""
+import sys, tty, termios, json, logging
 from rpi_ws281x import PixelStrip, Color
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
@@ -13,21 +13,42 @@ strip.begin()
 
 OFF = Color(0, 0, 0)
 WHITE = Color(255, 255, 255)
-
 airports = sorted(cfg["airports"], key=lambda a: a["led"])
 
-for ap in airports:
-    # Clear all LEDs
+def show_airport(idx):
+    ap = airports[idx]
     for i in range(cfg["led_count"]):
         strip.setPixelColor(i, OFF)
-    # Light this airport
     strip.setPixelColor(ap["led"], WHITE)
     strip.show()
-    logger.info("LED %2d: %s - %s (visited: %s)",
-                ap["led"], ap["icao"], ap["name"], ap.get("visited", False))
-    time.sleep(3)
+    logger.info("[%d/%d] LED %2d: %s - %s (visited: %s)",
+                idx + 1, len(airports), ap["led"], ap["icao"], ap["name"], ap.get("visited", False))
 
-# Clear all when done
+def getch():
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        return sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+idx = 0
+show_airport(idx)
+print("Controls: any key = next, b = back, q = quit")
+
+while True:
+    key = getch()
+    if key == 'q':
+        break
+    elif key == 'b':
+        idx = max(0, idx - 1)
+    else:
+        idx += 1
+        if idx >= len(airports):
+            break
+    show_airport(idx)
+
 for i in range(cfg["led_count"]):
     strip.setPixelColor(i, OFF)
 strip.show()
