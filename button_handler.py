@@ -86,40 +86,25 @@ class ButtonHandler:
         logger.info("Button monitoring stopped")
     
     def _monitor_button(self):
-        """Monitor the button for presses using edge detection"""
+        """Monitor the button for presses using polling"""
         logger.info(f"Button monitoring started on GPIO pin {self.button_pin}")
-        
-        # Flush any edges queued between GPIO.setup() and now
-        GPIO.wait_for_edge(self.button_pin, GPIO.FALLING, timeout=1)
-        logger.info("Flushed any stale edge events from startup")
-        
-        # Settle period: ignore edges for 2 seconds after startup to let
-        # EMI from LED strip updates dissipate
-        settle_end = time.time() + 2.0
-        while time.time() < settle_end and self.is_running:
-            GPIO.wait_for_edge(self.button_pin, GPIO.FALLING, timeout=500)
-        logger.info("Button settle period complete, now monitoring")
         
         try:
             while self.is_running:
-                # Wait for falling edge (button press) with timeout so we can check is_running
-                channel = GPIO.wait_for_edge(self.button_pin, GPIO.FALLING, timeout=500)
-                if channel is None:
-                    continue  # Timeout, loop back to check is_running
-                
-                # Immediately check pin state — if already HIGH, the edge was noise
+                # Poll: wait for pin to be LOW (pressed)
                 if GPIO.input(self.button_pin) != GPIO.LOW:
+                    time.sleep(0.05)
                     continue
                 
-                # Debounce: sample pin multiple times over 150ms, require all LOW
+                # Require pin LOW for 4 consecutive reads over 200ms
                 is_real_press = True
-                for _ in range(3):
+                for _ in range(4):
                     time.sleep(0.05)
                     if GPIO.input(self.button_pin) != GPIO.LOW:
                         is_real_press = False
                         break
                 if not is_real_press:
-                    continue  # Was just noise
+                    continue
                 
                 logger.info("Button pressed - executing callback")
                 if self.callback:
