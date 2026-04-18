@@ -353,10 +353,10 @@ def main():
     # Initialize METAR status with LED controller
     metar_status = METARStatus(config, led_controller)
     
-    # Set up button handler if available
+    # Set up button handler if available (started after initial fetch to avoid phantom presses during startup)
     button_handler = None
+    button_success = False
     if button_available:
-        # Configure the button handler with the toggle display mode callback
         button_pin = config.get("button_pin", DEFAULT_BUTTON_PIN)
         logger.info("Setting up button handler on GPIO pin %d", button_pin)
         
@@ -368,17 +368,10 @@ def main():
             metar_status.print_led_summary()
         
         button_handler = ButtonHandler(button_pin, toggle_mode_callback)
-        button_success = button_handler.start()
-        
-        if button_success:
-            logger.info("Button handler started successfully")
-            print(f"Button on GPIO {button_pin} enabled. Press button to toggle between METAR and TAF display.")
-        else:
-            logger.warning("Failed to start button handler")
     
     # Set up keyboard handler if button is not available
     keyboard_handler = None
-    if not button_handler or not button_success:
+    if not button_handler:
         logger.info("Setting up keyboard handler for mode switching")
         
         def keyboard_toggle_callback():
@@ -404,6 +397,15 @@ def main():
         forecast_hours = config.get("forecast_hours", [4])
         metar_status.mode_manager.current_forecast_hour = forecast_hours[0] if forecast_hours else 4
         metar_status.update_led_display()
+        
+        # Now start button handler after startup is complete
+        if button_handler:
+            button_success = button_handler.start()
+            if button_success:
+                logger.info("Button handler started successfully")
+                print(f"Button on GPIO {button_pin} enabled. Press button to toggle between METAR and TAF display.")
+            else:
+                logger.warning("Failed to start button handler")
         
         while True:
             # Wait for the configured update interval
