@@ -93,6 +93,13 @@ class ButtonHandler:
         GPIO.wait_for_edge(self.button_pin, GPIO.FALLING, timeout=1)
         logger.info("Flushed any stale edge events from startup")
         
+        # Settle period: ignore edges for 2 seconds after startup to let
+        # EMI from LED strip updates dissipate
+        settle_end = time.time() + 2.0
+        while time.time() < settle_end and self.is_running:
+            GPIO.wait_for_edge(self.button_pin, GPIO.FALLING, timeout=500)
+        logger.info("Button settle period complete, now monitoring")
+        
         try:
             while self.is_running:
                 # Wait for falling edge (button press) with timeout so we can check is_running
