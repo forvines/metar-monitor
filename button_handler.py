@@ -38,23 +38,6 @@ class ButtonHandler:
         self.callback = callback
         self.is_running = False
         self.thread = None
-        
-        # Early exit if GPIO is not available
-        if not GPIO_AVAILABLE:
-            logger.warning("ButtonHandler initialized but GPIO is not available")
-            return
-            
-        try:
-            # Set up GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(self.button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            logger.info(f"Button configured on GPIO pin {self.button_pin} with pull-up resistor")
-            # Test initial GPIO state
-            initial_state = GPIO.input(self.button_pin)
-            logger.info(f"Initial button state: {'HIGH' if initial_state else 'LOW'}")
-        except Exception as e:
-            logger.error(f"Error setting up GPIO: {str(e)}")
-            return
     
     def start(self):
         """Start the button monitoring thread"""
@@ -67,6 +50,13 @@ class ButtonHandler:
             return False
             
         try:
+            # Set up GPIO immediately before starting the monitor thread
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(self.button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            logger.info(f"Button configured on GPIO pin {self.button_pin} with pull-up resistor")
+            initial_state = GPIO.input(self.button_pin)
+            logger.info(f"Initial button state: {'HIGH' if initial_state else 'LOW'}")
+            
             self.is_running = True
             self.thread = threading.Thread(target=self._monitor_button, daemon=True)
             self.thread.start()
@@ -99,12 +89,20 @@ class ButtonHandler:
         """Monitor the button for presses using edge detection"""
         logger.info(f"Button monitoring started on GPIO pin {self.button_pin}")
         
+        # Flush any edges queued between GPIO.setup() and now
+        GPIO.wait_for_edge(self.button_pin, GPIO.FALLING, timeout=1)
+        logger.info("Flushed any stale edge events from startup")
+        
         try:
             while self.is_running:
                 # Wait for falling edge (button press) with timeout so we can check is_running
                 channel = GPIO.wait_for_edge(self.button_pin, GPIO.FALLING, timeout=500)
                 if channel is None:
                     continue  # Timeout, loop back to check is_running
+                
+                # Immediately check pin state — if already HIGH, the edge was noise
+                if GPIO.input(self.button_pin) != GPIO.LOW:
+                    continue
                 
                 # Debounce: sample pin multiple times over 150ms, require all LOW
                 is_real_press = True
