@@ -6,6 +6,7 @@ Handles display mode switching and LED display updates.
 """
 
 import logging
+import threading
 from constants import DisplayMode
 
 
@@ -21,6 +22,8 @@ class ModeManager:
         self.current_forecast_hour = forecast_hours[0] if forecast_hours else 4
         self.forecast_hour_index = 0
         self.logger = logging.getLogger("mode_manager")
+        self._revert_timer = None
+        self._last_airport_data = {}
         
         # Create airport to LED mapping
         self.airport_to_led = {}
@@ -66,11 +69,32 @@ class ModeManager:
         else:
             self.display_mode = DisplayMode.METAR
             self.logger.info("Display mode changed to METAR (Current Conditions)")
-            
+        
+        self._schedule_revert()
         return self.display_mode
+    
+    def _schedule_revert(self):
+        """Schedule a revert to METAR mode after 10 seconds of no button presses"""
+        if self._revert_timer:
+            self._revert_timer.cancel()
+        
+        if self.display_mode != DisplayMode.METAR:
+            self._revert_timer = threading.Timer(10.0, self._revert_to_metar)
+            self._revert_timer.daemon = True
+            self._revert_timer.start()
+    
+    def _revert_to_metar(self):
+        """Revert to METAR mode and update LEDs"""
+        self.logger.info("Auto-reverting to METAR mode after 10s timeout")
+        self.display_mode = DisplayMode.METAR
+        self.forecast_hour_index = 0
+        forecast_hours = self.config.get("forecast_hours", [4])
+        self.current_forecast_hour = forecast_hours[0] if forecast_hours else 4
+        self.update_led_display(self._last_airport_data)
     
     def update_led_display(self, airport_data):
         """Update LEDs based on current display mode"""
+        self._last_airport_data = airport_data
         if not self.led_controller:
             self.logger.debug("LED controller not available, skipping LED display update")
             return
