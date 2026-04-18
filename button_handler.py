@@ -106,9 +106,14 @@ class ButtonHandler:
                 if channel is None:
                     continue  # Timeout, loop back to check is_running
                 
-                # Debounce: wait for signal to stabilize then confirm still LOW
-                time.sleep(0.05)
-                if GPIO.input(self.button_pin) != GPIO.LOW:
+                # Debounce: sample pin multiple times over 150ms, require all LOW
+                is_real_press = True
+                for _ in range(3):
+                    time.sleep(0.05)
+                    if GPIO.input(self.button_pin) != GPIO.LOW:
+                        is_real_press = False
+                        break
+                if not is_real_press:
                     continue  # Was just noise
                 
                 logger.info("Button pressed - executing callback")

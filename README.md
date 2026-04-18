@@ -13,7 +13,7 @@ This application monitors METAR (Meteorological Aerodrome Reports) for specified
 
 - **LED support** for Raspberry Pi with WS2811 LED strips
 - **Forecast data** based on TAF (Terminal Aerodrome Forecast)
-- **Multiple forecast periods** (4h, 8h, 12h, 18h, 24h)
+- **Multiple forecast periods** (4h, 8h, 16h, 24h)
 - **Display mode toggle button** to cycle through current conditions and forecasts
 - **Robust API client** with retry logic, error handling, and comprehensive logging
 - **Crosswind calculation** for airports with runway information
@@ -82,7 +82,7 @@ Edit the `metar_config.json` file with your airport settings:
   "update_interval": 600,
   "metar_url": "https://aviationweather.gov/api/data/metar",
   "taf_url": "https://aviationweather.gov/api/data/taf",
-  "forecast_hours": [4, 8, 12, 18, 24],
+  "forecast_hours": [4, 8, 16, 24],
   "led_pin": 18,
   "led_count": 56,
   "led_brightness": 50,
@@ -172,12 +172,12 @@ sudo pip3 install rpi_ws281x RPi.GPIO
 6. The mode indicator LED (LED 55 by default, configurable as `mode_indicator_led` in config.json) will display the current mode:
    - White: METAR mode (current conditions)
    - Cyan: TAF mode with forecast ≤ 8 hours ahead
-   - Orange: TAF mode with forecast ≤ 12 hours ahead
-   - Pink: TAF mode with forecast > 12 hours ahead
+   - Orange: TAF mode with forecast ≤ 16 hours ahead
+   - Pink: TAF mode with forecast > 16 hours ahead
 
 7. When the system is running, press the button to cycle through the modes:
    - First press changes from METAR to TAF mode showing the first forecast period (4 hours)
-   - Additional presses cycle through available forecast periods (8h, 12h, 18h, 24h)
+   - Additional presses cycle through available forecast periods (8h, 16h, 24h)
    - After cycling through all forecast periods, returns to METAR mode
 
 ## Keyboard Mode Switching
@@ -194,7 +194,7 @@ If no button is configured or available, you can use keyboard input to switch di
 ### Display Modes
 
 - **METAR Mode**: Shows current weather conditions
-- **TAF Mode**: Shows forecast data for configured time periods (4h, 8h, 12h, 18h, 24h)
+- **TAF Mode**: Shows forecast data for configured time periods (4h, 8h, 16h, 24h)
 - **Airports Visited Mode**: Shows green for visited airports, red for unvisited (based on `visited_airports` config)
 - **Test Mode**: Shows green for airports with valid METAR data, red for those without
 
