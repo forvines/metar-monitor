@@ -1291,7 +1291,7 @@
     ],
     "led_pin": 18,
     "led_count": 103,
-    "led_brightness": 80,
+    "led_brightness": 100,
     "led_freq_hz": 800000,
     "led_dma": 10,
     "led_invert": false,
