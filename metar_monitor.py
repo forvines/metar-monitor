@@ -398,6 +398,13 @@ def main():
         if metar_status.fetch_metar_data():
             print("\nCompleted fetching all airport data.")
         
+        # Ensure we start in METAR mode after initial fetch
+        metar_status.mode_manager.display_mode = DisplayMode.METAR
+        metar_status.mode_manager.forecast_hour_index = 0
+        forecast_hours = config.get("forecast_hours", [4])
+        metar_status.mode_manager.current_forecast_hour = forecast_hours[0] if forecast_hours else 4
+        metar_status.update_led_display()
+        
         while True:
             # Wait for the configured update interval
             print(f"\nNext update in {config['update_interval'] // 60} minutes. Press Ctrl+C to exit.")
