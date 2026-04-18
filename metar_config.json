@@ -1300,5 +1300,6 @@
     "light_sensor_update_interval": 5,
     "min_brightness": 50,
     "max_brightness": 100,
-    "open_meteo_fallback": true
+    "open_meteo_fallback": true,
+    "mode_revert_seconds": 10
 }

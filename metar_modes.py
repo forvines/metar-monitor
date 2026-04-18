@@ -7,7 +7,7 @@ Handles display mode switching and LED display updates.
 
 import logging
 import threading
-from constants import DisplayMode
+from constants import DisplayMode, DEFAULT_MODE_REVERT_SECONDS
 
 
 class ModeManager:
@@ -78,8 +78,9 @@ class ModeManager:
         if self._revert_timer:
             self._revert_timer.cancel()
         
+        revert_seconds = self.config.get("mode_revert_seconds", DEFAULT_MODE_REVERT_SECONDS)
         if self.display_mode != DisplayMode.METAR:
-            self._revert_timer = threading.Timer(10.0, self._revert_to_metar)
+            self._revert_timer = threading.Timer(revert_seconds, self._revert_to_metar)
             self._revert_timer.daemon = True
             self._revert_timer.start()
     

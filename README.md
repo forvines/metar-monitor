@@ -179,6 +179,7 @@ sudo pip3 install rpi_ws281x RPi.GPIO
    - First press changes from METAR to TAF mode showing the first forecast period (4 hours)
    - Additional presses cycle through available forecast periods (8h, 16h, 24h)
    - After cycling through all forecast periods, returns to METAR mode
+   - The display automatically reverts to METAR mode after a configurable timeout (default 10 seconds, set `mode_revert_seconds` in config)
 
 ## Keyboard Mode Switching
 
