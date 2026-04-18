@@ -35,19 +35,20 @@ def getch():
 
 idx = 0
 show_airport(idx)
-print("Controls: any key = next, b = back, q = quit")
+print("Controls: n/space/enter = next, b = back, q = quit")
 
 while True:
     key = getch()
-    if key == 'q':
+    if key in ('q', '\x03'):  # q or Ctrl-C
         break
     elif key == 'b':
         idx = max(0, idx - 1)
-    else:
+        show_airport(idx)
+    elif key in ('n', ' ', '\r', '\n'):  # n, space, or enter
         idx += 1
         if idx >= len(airports):
             break
-    show_airport(idx)
+        show_airport(idx)
 
 for i in range(cfg["led_count"]):
     strip.setPixelColor(i, OFF)
