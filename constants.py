@@ -8,9 +8,6 @@ Contains all constant values and configuration defaults used throughout the appl
 DEFAULT_BUTTON_PIN = 17
 
 # Light sensor configuration
-DEFAULT_LIGHT_SENSOR_UPDATE_INTERVAL = 30  # seconds
-DEFAULT_MIN_BRIGHTNESS = 10  # minimum LED brightness percentage
-DEFAULT_MAX_BRIGHTNESS = 100  # maximum LED brightness percentage
 DEFAULT_MODE_REVERT_SECONDS = 10  # seconds before auto-reverting to METAR mode
 
 # Flight categories and their descriptions

@@ -29,10 +29,8 @@ from constants import DisplayMode
 from constants import (
     COLORS, CATEGORY_COLOR_MAP, FLIGHT_CATEGORIES, 
     THRESHOLDS, DEFAULT_BUTTON_PIN,
-    DEFAULT_LIGHT_SENSOR_UPDATE_INTERVAL, DEFAULT_MIN_BRIGHTNESS, DEFAULT_MAX_BRIGHTNESS,
     CONFIG_FILE, DISPLAY_FORMATTING, MODE_INDICATOR_COLOR, MODE_NAMES
 )
-from light_sensor import LightSensor
 
 
 
@@ -103,13 +101,10 @@ def load_config():
         sys.exit(1)
 
 class LEDController:
-    def __init__(self, config, light_sensor=None):
+    def __init__(self, config):
         self.strip = None
         self.config = config
         self.initialized = False
-        self.light_sensor = light_sensor
-        self.current_brightness = config["led_brightness"]
-        self.last_brightness_update = 0
         
         if LED_ENABLED:
             try:
@@ -135,50 +130,10 @@ class LEDController:
                 logging.error(f"Error initializing LED strip: {e}")
                 self.initialized = False
     
-    def update_brightness(self):
-        """Update LED brightness based on light sensor"""
-        if not self.light_sensor or not self.initialized:
-            return
-            
-        current_time = time.time()
-        update_interval = self.config.get("light_sensor_update_interval", DEFAULT_LIGHT_SENSOR_UPDATE_INTERVAL)
-        
-        # Only update brightness periodically
-        if current_time - self.last_brightness_update < update_interval:
-            return
-            
-        min_brightness = self.config.get("min_brightness", DEFAULT_MIN_BRIGHTNESS)
-        max_brightness = self.config.get("max_brightness", DEFAULT_MAX_BRIGHTNESS)
-        
-        new_brightness = self.light_sensor.get_auto_brightness(min_brightness, max_brightness)
-        
-        if new_brightness != self.current_brightness:
-            self.current_brightness = new_brightness
-            self.strip.setBrightness(new_brightness)
-            self.strip.show()
-            logging.info(f"LED brightness adjusted to {new_brightness}%")
-            print(f"Light sensor: LED brightness adjusted to {new_brightness}%")
-            
-        self.last_brightness_update = current_time
-    
-    def set_led(self, index, color_name):
-        """Set an LED to a specific color (batched, call show() to flush)"""
-        if not self.initialized or index >= self.config["led_count"]:
-            logging.warning(f"LED index {index} out of range or LED strip not initialized.")
-            return
-            
-        if color_name in LED_COLORS:
-            color = LED_COLORS[color_name]
-            self.strip.setPixelColor(index, color)
-        else:
-            logging.warning(f"Unknown color name: {color_name}. Using default OFF color.")
-            self.strip.setPixelColor(index, LED_COLORS["OFF"])
-    
     def show(self):
         """Flush all pending LED changes to the strip"""
         if not self.initialized:
             return
-        self.update_brightness()
         self.strip.show()
     
     def clear(self):
@@ -331,22 +286,11 @@ def main():
     logger.info("Update interval: %d seconds", config['update_interval'])
     logger.info("Forecast hours: %s", str(config['forecast_hours']))
     
-    # Initialize light sensor
-    light_sensor = None
-    try:
-        light_sensor = LightSensor()
-        if light_sensor.available:
-            logger.info("Light sensor initialized successfully")
-        else:
-            logger.info("Light sensor not available, using fixed brightness")
-    except Exception as e:
-        logger.warning(f"Failed to initialize light sensor: {e}")
-    
     # Initialize LED controller if possible
     led_controller = None
     if LED_ENABLED:
         logger.info("LED support is enabled, initializing controller")
-        led_controller = LEDController(config, light_sensor)
+        led_controller = LEDController(config)
     else:
         logger.info("LED support is disabled, running in console-only mode")
     
@@ -450,10 +394,6 @@ def main():
         if led_controller:
             led_controller.clear()
             logger.info("LED controller cleared")
-            
-        if light_sensor:
-            light_sensor.close()
-            logger.info("Light sensor closed")
             
         logger.info("METAR Monitor shut down cleanly")
 

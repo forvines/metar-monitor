@@ -53,11 +53,6 @@ The installation script will:
 
 Edit the `metar_config.json` file with your airport settings:
 
-**Light Sensor Configuration:**
-- `light_sensor_update_interval`: How often to check light level (seconds)
-- `min_brightness`: Minimum LED brightness percentage (1-100)
-- `max_brightness`: Maximum LED brightness percentage (1-100)
-
 ```json
 {
   "crosswind_threshold": 10,
@@ -85,7 +80,7 @@ Edit the `metar_config.json` file with your airport settings:
   "forecast_hours": [4, 8, 16, 24],
   "led_pin": 18,
   "led_count": 56,
-  "led_brightness": 50,
+  "led_brightness": 80,
   "led_freq_hz": 800000,
   "led_dma": 10,
   "led_invert": false,
@@ -216,7 +211,7 @@ The LED summary is displayed:
 
 ## Wiring
 
-See [WIRING_GUIDE.md](WIRING_GUIDE.md) for detailed wiring diagrams, GPIO pin assignments, power requirements, and safety notes for the LED strip, button, and light sensor.
+See [WIRING_GUIDE.md](WIRING_GUIDE.md) for detailed wiring diagrams, GPIO pin assignments, power requirements, and safety notes for the LED strip and button.
 
 ## Diagnostic and Debug Tools
 
@@ -261,29 +256,6 @@ Checks for:
 - Status of known problem indices
 
 Update the `LED_COUNT` variable in the script to match your strip length.
-
-### I2C / Light Sensor Diagnostic (`tests/diagnose_i2c.py`)
-
-Comprehensive diagnostic for the BH1750 light sensor and I2C bus:
-
-```bash
-sudo python3 tests/diagnose_i2c.py
-```
-
-Checks:
-- I2C kernel modules loaded
-- I2C enabled in `/boot/config.txt`
-- I2C bus scan for devices
-- Python library availability (`smbus2`, `RPi.GPIO`)
-- Direct sensor communication at addresses `0x23` and `0x5C`
-
-### Light Sensor Test (`tests/test_light_sensor_hw.py`)
-
-Quick test for light sensor readings:
-
-```bash
-sudo python3 tests/test_light_sensor_hw.py
-```
 
 ### Quick GPIO Button Check
 
@@ -427,12 +399,6 @@ Common issues:
 - Verify GPIO 17 wiring (see [WIRING_GUIDE.md](WIRING_GUIDE.md))
 - Check debounce — multiple triggers may need increased `DEBOUNCE_TIME` in `button_handler.py`
 
-### Light sensor not detected
-
-- Run `sudo python3 tests/diagnose_i2c.py` for a full diagnostic
-- Run `i2cdetect -y 1` to check if the sensor appears on the I2C bus
-- Verify SDA/SCL wiring and that I2C is enabled (`sudo raspi-config` → Interface Options → I2C)
-
 ### API connection issues
 
 - Check internet connection
@@ -471,7 +437,6 @@ The codebase is organized as follows:
 - `metar_display.py` - Terminal display formatting and output
 - `metar_modes.py` - Display mode management (METAR, TAF, Visited, Test)
 - `button_handler.py` - GPIO button handling for mode toggle
-- `light_sensor.py` - BH1750 I2C light sensor for auto-brightness
 - `constants.py` - Constants, defaults, and configuration settings
 - `metar_config.json` - Configuration file
 - `metar-monitor.service` - Systemd service file
