@@ -130,6 +130,18 @@ class LEDController:
                 logging.error(f"Error initializing LED strip: {e}")
                 self.initialized = False
     
+    def set_led(self, index, color_name):
+        """Set an LED to a specific color (batched, call show() to flush)"""
+        if not self.initialized or index >= self.config["led_count"]:
+            logging.warning(f"LED index {index} out of range or LED strip not initialized.")
+            return
+            
+        if color_name in LED_COLORS:
+            self.strip.setPixelColor(index, LED_COLORS[color_name])
+        else:
+            logging.warning(f"Unknown color name: {color_name}. Using default OFF color.")
+            self.strip.setPixelColor(index, LED_COLORS["OFF"])
+    
     def show(self):
         """Flush all pending LED changes to the strip"""
         if not self.initialized:
